@@ -95,12 +95,31 @@ def main():
     streaming_manager = device.streaming_manager
     streaming_client = streaming_manager.streaming_client
 
-    # 4. Set custom config for streaming
+    # 4. Set custom config for streaming - ONLY RGB and eye gaze
     streaming_config = aria.StreamingConfig()
-    streaming_config.profile_name = args.profile_name
+    
+    # Use a minimal profile that supports RGB and gaze
+    streaming_config.profile_name = "profile18"
 
+    # Enable only the RGB camera and eye gaze
+    if hasattr(streaming_config, "enable_rgb"):
+        streaming_config.enable_rgb = True
     if hasattr(streaming_config, "enable_eye_gaze"):
         streaming_config.enable_eye_gaze = True
+    
+    # Disable all other streams
+    if hasattr(streaming_config, "enable_slam"):
+        streaming_config.enable_slam = False
+    if hasattr(streaming_config, "enable_et"):
+        streaming_config.enable_et = False
+    if hasattr(streaming_config, "enable_audio"):
+        streaming_config.enable_audio = False
+    if hasattr(streaming_config, "enable_imu"):
+        streaming_config.enable_imu = False
+    if hasattr(streaming_config, "enable_magnetometer"):
+        streaming_config.enable_magnetometer = False
+    if hasattr(streaming_config, "enable_barometer"):
+        streaming_config.enable_barometer = False
 
     #    Note: by default streaming uses Wifi
     if args.streaming_interface == "usb":
@@ -117,35 +136,24 @@ def main():
     streaming_state = streaming_manager.streaming_state
     print(f"Streaming state: {streaming_state}")
 
-    #device_calibration = device.factory_calibration_json
-
     # Convert JSON string to calibration object
     from projectaria_tools.core.calibration import device_calibration_from_json_string
     device_calibration = device_calibration_from_json_string(device.factory_calibration_json)
 
-
     # 7. Create the visualizer observer and attach the streaming client
-    # Logging is only enabled when --log flag is used
+    # Logging is disabled by default for gaze-only streaming
     enable_logging = args.log
-    enable_pupil = args.enable_pupil
     
     aria_visualizer = AriaVisualizer()
     observer = AriaVisualizerStreamingClientObserver(
         aria_visualizer,
         device_calibration,
         enable_logging=enable_logging,
-        enable_pupil_detection=enable_pupil
+        enable_pupil_detection=False  # Disabled for gaze-only mode
     )
     aria_visualizer.set_observer(observer)  # Store reference for cleanup
     streaming_client.set_streaming_client_observer(observer)
     streaming_client.subscribe()
-
-    # def gaze_cb(sample):
-    #     # sample.pixel_xy is assumed to be (u, v) in RGB pixels.
-    #     observer = aria_visualizer_streaming_client_observer
-    #     observer.on_eye_gaze_received(sample.pixel_xy if sample.is_valid else None)
-
-    # streaming_client.set_eye_gaze_callback(gaze_cb)
 
     # 8. Visualize the streaming data until we close the window
     render_error = None
