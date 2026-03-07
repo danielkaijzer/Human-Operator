@@ -1,0 +1,62 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.venv/
+venv/
+ENV/
+env/
+bin/
+lib/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.installed.cfg
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Computer Vision / ML Specific
+# Ignore large dataset folders (adjust names to your project)
+data/
+datasets/
+models/*.pth
+models/*.onnx
+models/*.pb
+models/*.h5
+weights/
+outputs/
+runs/
+*.mp4
+*.avi
+*.jpg
+*.jpeg
+*.png
+
+# Hardware / Embedded (OpenBCI/Arduino/DIY Eye-tracker)
+# Ignore build artifacts if you're using C++ extensions or Arduino IDE
+build/
+*.o
+*.so
+*.out
+.pio/
+.vscode/
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
