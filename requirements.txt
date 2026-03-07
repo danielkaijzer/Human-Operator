@@ -1,0 +1,5 @@
+anthropic
+numpy
+opencv-python
+python-dotenv
+dotenv
