@@ -10,22 +10,35 @@ import cv2
 import numpy as np
 import socket
 import time
+import json
 from collections import deque
 
 # --- Configuration ---
 UDP_IP = "127.0.0.1"
 UDP_PORT = 5005
-UDP_MESSAGE = "OBJECT_APPROACHING"
+
+EMS_COMMAND = {
+    "type": "EMS",
+    "channel": 1,
+    "amplitude": 60,
+    "frequency": 100,
+    "duration": 1
+}
+UDP_MESSAGE = json.dumps(EMS_COMMAND).encode("utf-8")
 
 # HSV range for bright orange
-# TODO: Fine tune this to the particular ball color and camera we're using
-ORANGE_LOW = np.array([165, 125, 0])
-ORANGE_HIGH = np.array([255, 255, 255])
+# Ball 1 Settings
+BALL_LOW = np.array([165, 125, 0])
+BALL_HIGH = np.array([255, 255, 255])
+
+# Ball 2 Settings
+BALL_LOW = np.array([0, 100, 0])
+BALL_HIGH = np.array([5, 255, 255])
 
 # TODO: Play around with these parameters
 MIN_CONTOUR_AREA = 500       # ignore small noise
 AREA_BUFFER_SIZE = 5          # rolling buffer length
-APPROACH_RATIO = 1.5          # latest area must be this factor larger than earliest
+APPROACH_RATIO = 5          # latest area must be this factor larger than earliest
 COOLDOWN_SECONDS = 1.0        # minimum time between UDP sends
 
 
@@ -70,7 +83,7 @@ def main():
 
         # Convert to HSV and create orange mask
         hsv = cv2.cvtColor(frame1, cv2.COLOR_BGR2HSV)
-        mask = cv2.inRange(hsv, ORANGE_LOW, ORANGE_HIGH)
+        mask = cv2.inRange(hsv, BALL_LOW, BALL_HIGH)
 
         # Morphological cleanup
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
@@ -101,7 +114,7 @@ def main():
                     status_text = "OBJECT APPROACHING!"
                     now = time.time()
                     if now - last_send_time > COOLDOWN_SECONDS:
-                        sock.sendto(UDP_MESSAGE.encode("utf-8"), (UDP_IP, UDP_PORT))
+                        sock.sendto(UDP_MESSAGE, (UDP_IP, UDP_PORT))
                         print(f"[UDP] Sent '{UDP_MESSAGE}' to {UDP_IP}:{UDP_PORT}")
                         last_send_time = now
                 else:
@@ -119,7 +132,7 @@ def main():
         # Show camera feed and mask side-by-side
         mask_bgr = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
         combined = np.hstack((frame1, mask_bgr))
-        cv2.imshow('Orange Detection', combined)
+        cv2.imshow('Ball Detection', combined)
 
         if cv2.waitKey(1) == ord('q'):
             break
