@@ -8,23 +8,19 @@ The idea:
 
 import cv2
 import numpy as np
-import socket
+import requests
 import time
 import json
 from collections import deque
 
 # --- Configuration ---
-UDP_IP = "127.0.0.1"
-UDP_PORT = 5005
+RECEIVER_URL = "https://atlas-delhi-forest-stephen.trycloudflare.com/execute"
 
 EMS_COMMAND = {
-    "type": "EMS",
-    "channel": 1,
-    "amplitude": 60,
-    "frequency": 100,
-    "duration": 1
+    "0": [
+        {"type": "EMS", "channel": 1, "amplitude": 60, "duration": 1.0, "frequency": 100}
+    ]
 }
-UDP_MESSAGE = json.dumps(EMS_COMMAND).encode("utf-8")
 
 # HSV range for bright orange
 # Ball 1 Settings
@@ -32,13 +28,13 @@ BALL_LOW = np.array([165, 125, 0])
 BALL_HIGH = np.array([255, 255, 255])
 
 # Ball 2 Settings
-BALL_LOW = np.array([0, 100, 0])
-BALL_HIGH = np.array([5, 255, 255])
+# BALL_LOW = np.array([0, 100, 0])
+# BALL_HIGH = np.array([5, 255, 255])
 
 # TODO: Play around with these parameters
-MIN_CONTOUR_AREA = 500       # ignore small noise
+MIN_CONTOUR_AREA = 1000       # ignore small noise
 AREA_BUFFER_SIZE = 5          # rolling buffer length
-APPROACH_RATIO = 5          # latest area must be this factor larger than earliest
+APPROACH_RATIO = 4          # latest area must be this factor larger than earliest
 COOLDOWN_SECONDS = 1.0        # minimum time between UDP sends
 
 
@@ -68,9 +64,6 @@ def main():
         print(f"Error: Could not open camera with index {camera_index_1}.")
         print("Please make sure your camera is connected and the correct index is used.")
         return
-
-    # UDP socket (non-blocking, fire-and-forget)
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
     area_buffer = deque(maxlen=AREA_BUFFER_SIZE)
     last_send_time = 0.0
@@ -114,8 +107,11 @@ def main():
                     status_text = "OBJECT APPROACHING!"
                     now = time.time()
                     if now - last_send_time > COOLDOWN_SECONDS:
-                        sock.sendto(UDP_MESSAGE, (UDP_IP, UDP_PORT))
-                        print(f"[UDP] Sent '{UDP_MESSAGE}' to {UDP_IP}:{UDP_PORT}")
+                        try:
+                            response = requests.post(RECEIVER_URL, json=EMS_COMMAND, timeout=5)
+                            print(f"[HTTP] Sent EMS command to {RECEIVER_URL} -> {response.status_code}")
+                        except Exception as e:
+                            print(f"[HTTP] Error: {e}")
                         last_send_time = now
                 else:
                     status_text = "object detected"
@@ -137,7 +133,6 @@ def main():
         if cv2.waitKey(1) == ord('q'):
             break
 
-    sock.close()
     cap1.release()
     cv2.destroyAllWindows()
 
