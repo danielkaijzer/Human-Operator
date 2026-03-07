@@ -19,8 +19,8 @@ UDP_MESSAGE = "OBJECT_APPROACHING"
 
 # HSV range for bright orange
 # TODO: Fine tune this to the particular ball color and camera we're using
-ORANGE_LOW = np.array([5, 100, 100])
-ORANGE_HIGH = np.array([20, 255, 255])
+ORANGE_LOW = np.array([165, 125, 0])
+ORANGE_HIGH = np.array([255, 255, 255])
 
 # TODO: Play around with these parameters
 MIN_CONTOUR_AREA = 500       # ignore small noise
@@ -105,7 +105,7 @@ def main():
                         print(f"[UDP] Sent '{UDP_MESSAGE}' to {UDP_IP}:{UDP_PORT}")
                         last_send_time = now
                 else:
-                    status_text = "Orange object detected"
+                    status_text = "object detected"
             else:
                 area_buffer.clear()
         else:
