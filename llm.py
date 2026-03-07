@@ -49,13 +49,21 @@ class LLMClient:
 if __name__ == "__main__":
     import cv2
     import numpy as np
+    import time
     
     # Example usage
     client = LLMClient()
+
+    #latency test with a simple image prompt
 
     # create a simple red square image for testing
     red_square = np.zeros((100, 100, 3), dtype=np.uint8)
     red_square[:] = (255, 0, 0)  # Red in BGR format
     _, image_bytes = cv2.imencode(".jpg", red_square)
+
+    # timing the response
+    start_time = time.time()
     response = client.ask_with_image("What do you see in this image?", image_bytes.tobytes())
+    end_time = time.time()
+    print(f"Response time: {end_time - start_time:.2f} seconds")
     print("Claude's response:", response)
