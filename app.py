@@ -4,39 +4,14 @@ Video stream client that captures frames and sends them to the LLM for motor com
 """
 
 import cv2
-from llm import LLMClient
 import json
 import time
 import threading
-from speech import VoiceCommandListener
+from utils.llm import LLMClient
+from utils.speech import VoiceCommandListener
+from utils.prompts import SYSTEM_PROMPT, PLANNING_PROMPT, CHECK_PROMPT
 
 STREAM_URL = "https://technique-bool-wiley-african.trycloudflare.com/video"
-
-SYSTEM_PROMPT = """You generate motor movement commands for a human body when receiving POV images. 
-Here are the json action options available:
-- "clench_hand"
-- "close_thumb"
-- "close_index"
-- "close_middle"
-- "close_ring"
-- "close_pinky"
-- "wrist_left"
-- "wrist_right"
-- "biceps_flex" (to move lower arm up)
-- "lean_left" (strafing left via GVS)
-- "lean_right" (strafing right)
-
-JSON structure for sequence of actions:
-{
-  "sequence_1": [["action1", duration_seconds], ["action2", duration_seconds]],
-  "sequence_2": [["action3", duration_seconds]]
-}
-
-Instructions:
-- Only return valid JSON
-- Only include actions you want to change
-- Durations in seconds (float values)
-- Respond based on what you see in the POV image"""
 
 
 def get_latest_frame() -> bytes:
