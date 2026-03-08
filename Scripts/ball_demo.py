@@ -14,13 +14,22 @@ import json
 from collections import deque
 
 # --- Configuration ---
-RECEIVER_URL = "https://atlas-delhi-forest-stephen.trycloudflare.com/execute"
+RECEIVER_URL = "https://amsterdam-river-lease-toolbox.trycloudflare.com/execute"
 
 EMS_COMMAND = {
     "0": [
-        {"type": "EMS", "channel": 1, "amplitude": 60, "duration": 1.0, "frequency": 100}
+        {"type": "EMS", "channel": 1, "amplitude": 60, "frequency": 100, "duration": 1.0}
     ]
 }
+
+RELAY_COMMAND = {
+    "0": [
+        {"type": "RELAY", "finger": "m"},
+    ]
+}
+
+response = requests.post(RECEIVER_URL, json=RELAY_COMMAND, timeout=5)
+print(f"[HTTP] Sent RELAY command to {RECEIVER_URL} -> {response.status_code}")
 
 # HSV range for bright orange
 # Ball 1 Settings

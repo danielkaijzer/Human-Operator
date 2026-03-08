@@ -12,6 +12,7 @@ View in browser:
 
 import argparse
 import socket
+import time
 import cv2
 import threading
 from http.server import BaseHTTPRequestHandler
@@ -19,13 +20,14 @@ from socketserver import ThreadingMixIn, TCPServer
 
 # Shared state
 lock = threading.Lock()
-current_frame = None
+current_jpeg = None
+frame_id = 0
 running = True
 
 
 def capture_frames(camera_index):
-    """Continuously capture frames from the camera."""
-    global current_frame, running
+    """Continuously capture frames from the camera and pre-encode as JPEG."""
+    global current_jpeg, frame_id, running
 
     cap = cv2.VideoCapture(camera_index)
     if not cap.isOpened():
@@ -33,7 +35,12 @@ def capture_frames(camera_index):
         running = False
         return
 
+    # Use native resolution, just minimize internal buffering
+    cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+
     print(f"Camera {camera_index} opened successfully")
+
+    encode_params = [cv2.IMWRITE_JPEG_QUALITY, 70]
 
     while running:
         ret, frame = cap.read()
@@ -41,8 +48,14 @@ def capture_frames(camera_index):
             print("Error: Can't receive frame. Exiting...")
             running = False
             break
+
+        ret, jpeg = cv2.imencode(".jpg", frame, encode_params)
+        if not ret:
+            continue
+
         with lock:
-            current_frame = frame
+            current_jpeg = jpeg.tobytes()
+            frame_id += 1
 
     cap.release()
 
@@ -65,25 +78,37 @@ class StreamHandler(BaseHTTPRequestHandler):
         elif self.path == "/video":
             self.send_response(200)
             self.send_header("Content-Type", "multipart/x-mixed-replace; boundary=frame")
+            self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+            self.send_header("Pragma", "no-cache")
             self.end_headers()
+
+            # Disable Nagle's algorithm for lower latency
+            self.connection.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+            # Small send buffer so stale frames don't queue in the kernel
+            self.connection.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 65536)
+
+            last_sent_id = 0
 
             while running:
                 with lock:
-                    frame = current_frame
+                    jpeg_bytes = current_jpeg
+                    fid = frame_id
 
-                if frame is None:
+                # No new frame yet — short sleep and retry
+                if jpeg_bytes is None or fid == last_sent_id:
+                    time.sleep(0.005)
                     continue
 
-                ret, jpeg = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
-                if not ret:
-                    continue
+                # Always jump to the latest frame, dropping any in between
+                last_sent_id = fid
 
                 try:
                     self.wfile.write(b"--frame\r\n")
                     self.wfile.write(b"Content-Type: image/jpeg\r\n\r\n")
-                    self.wfile.write(jpeg.tobytes())
+                    self.wfile.write(jpeg_bytes)
                     self.wfile.write(b"\r\n")
-                except BrokenPipeError:
+                    self.wfile.flush()
+                except (BrokenPipeError, ConnectionResetError, OSError):
                     break
 
         else:
@@ -91,7 +116,6 @@ class StreamHandler(BaseHTTPRequestHandler):
             self.end_headers()
 
     def log_message(self, format, *args):
-        # Suppress per-request logs to keep output clean
         pass
 
 

@@ -9,17 +9,18 @@ daemon thread sends frames to Claude API and executes EMS commands.
 import cv2
 import requests
 import time
+import json
 import base64
 import os
 import threading
 import anthropic
 
 # --- Configuration ---
-RECEIVER_URL = "https://appearance-prime-compute-sorted.trycloudflare.com/execute"
-API_INTERVAL = 1.5          # seconds between API calls
+RECEIVER_URL = "https://amsterdam-river-lease-toolbox.trycloudflare.com/execute"
+API_INTERVAL = 1.0          # seconds between API calls
 CAMERA_INDEX = 0
 MODEL = "claude-sonnet-4-20250514"
-MAX_TOKENS = 256
+MAX_TOKENS = 1024
 
 # EMS defaults
 EMS_AMPLITUDE = 60
@@ -30,36 +31,57 @@ EMS_FREQUENCY = 100
 JPEG_QUALITY = 60
 FRAME_RESIZE = (512, 384)
 
-# Cooldown: skip EMS if triggered within this many seconds
+# Minimum delay between EMS commands during execution
 EMS_COOLDOWN = 3.0
 
-# --- Claude tool definitions ---
-TOOLS = [
-    {
-        "name": "trigger_ems",
-        "description": "Trigger EMS stimulation on a specific finger. Use this when the observed scene matches the task criteria.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "finger": {
-                    "type": "string",
-                    "enum": ["p", "m", "i", "x"],
-                    "description": "Which finger to stimulate: p=pinky, m=middle, i=index, x=all"
-                }
-            },
-            "required": ["finger"]
-        }
-    },
-    {
-        "name": "do_nothing",
-        "description": "Explicitly choose to take no action this frame. Use when the scene does not match the task criteria.",
-        "input_schema": {
-            "type": "object",
-            "properties": {},
-            "required": []
-        }
-    }
-]
+# --- System prompts ---
+PLANNING_PROMPT = """You are an AI that controls a human's RIGHT hand via EMS (electrical muscle stimulation). \
+You observe a camera frame showing the current scene and the human's hand, then create a step-by-step plan to accomplish the task.
+
+CAPABILITIES:
+- "ems" action: Activate a finger via electrical stimulation.
+  Fingers: p=pinky, m=middle, i=index (also closes thumb+index for gripping), x=all fingers.
+  CRITICAL: Finger selections STACK. Sending 'p' then 'm' activates BOTH. To isolate one finger, send 'x' first to reset, then the target finger.
+- "text" action: Display an instruction on screen for the human to follow voluntarily (for arm/hand movement EMS can't do, e.g. "move your hand over the keyboard", "move left").
+- "wait" action: Pause between steps to give time for movement or recovery.
+
+RULES:
+1. First, assess the current scene. If the hand isn't in position for the task, start with "text" steps to guide it there.
+2. Plan the FULL sequence of steps needed to accomplish the task.
+3. Assign a reasonable "delay" (seconds to wait BEFORE executing each step). Use at least 2s between EMS steps, and 3-5s after text commands to give the human time to move.
+4. Keep steps concise and purposeful.
+5. Assume each EMS command succeeds — do NOT add redundant repeat steps.
+6. Have fun with it — you're literally puppeteering a human hand!
+
+Respond with ONLY a valid JSON array of steps. Each step is an object with:
+- "action": one of "ems", "text", "wait"
+- "finger": (for "ems" only) one of "p", "m", "i", "x"
+- "message": (for "text" only) short instruction string
+- "delay": seconds to wait BEFORE this step executes (number)
+- "description": brief human-readable description of what this step does
+
+Example:
+[
+  {"action": "text", "message": "Place your right hand over the keyboard", "delay": 0, "description": "Guide hand to keyboard"},
+  {"action": "wait", "delay": 5, "description": "Wait for hand positioning"},
+  {"action": "ems", "finger": "x", "delay": 0, "description": "Reset all fingers"},
+  {"action": "ems", "finger": "i", "delay": 2, "description": "Press index finger down"},
+  {"action": "ems", "finger": "x", "delay": 2, "description": "Reset before next finger"},
+  {"action": "ems", "finger": "m", "delay": 2, "description": "Press middle finger down"}
+]"""
+
+CHECK_PROMPT = """You are monitoring a live camera feed during EMS hand control. The human's RIGHT hand should be in the correct position for the next step.
+
+You will be shown:
+1. The current camera frame
+2. The task being performed
+3. The next step about to execute
+
+Respond with ONLY a valid JSON object:
+- If everything looks fine to proceed: {"ok": true}
+- If the hand is NOT in position and the step would fail: {"ok": false, "message": "short instruction to fix positioning"}
+
+Be LENIENT — only flag a problem if the hand is clearly out of position (e.g. not over the keyboard when a key press is next). Do NOT second-guess or repeat previous steps. Assume all prior EMS commands succeeded."""
 
 
 def encode_frame(frame):
@@ -68,6 +90,55 @@ def encode_frame(frame):
     encode_params = [cv2.IMWRITE_JPEG_QUALITY, JPEG_QUALITY]
     _, buf = cv2.imencode('.jpg', resized, encode_params)
     return base64.standard_b64encode(buf).decode('utf-8')
+
+
+def parse_json_response(raw_text):
+    """Extract and parse JSON from Claude's response, handling markdown fences and preamble."""
+    text = raw_text.strip()
+
+    # Strip markdown code fences
+    if "```" in text:
+        # Find content between first ``` and last ```
+        parts = text.split("```")
+        if len(parts) >= 3:
+            inner = parts[1]
+            # Remove optional language tag (e.g. "json\n")
+            if inner.startswith("json"):
+                inner = inner[4:]
+            text = inner.strip()
+
+    # If still not starting with [ or {, try to find the first [ or {
+    if not text.startswith("[") and not text.startswith("{"):
+        bracket = text.find("[")
+        brace = text.find("{")
+        if bracket >= 0 and (brace < 0 or bracket < brace):
+            text = text[bracket:]
+        elif brace >= 0:
+            text = text[brace:]
+
+    # Trim trailing junk after the closing bracket/brace
+    if text.startswith("["):
+        depth = 0
+        for idx, ch in enumerate(text):
+            if ch == "[":
+                depth += 1
+            elif ch == "]":
+                depth -= 1
+                if depth == 0:
+                    text = text[:idx + 1]
+                    break
+    elif text.startswith("{"):
+        depth = 0
+        for idx, ch in enumerate(text):
+            if ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0:
+                    text = text[:idx + 1]
+                    break
+
+    return json.loads(text)
 
 
 def send_ems_command(finger):
@@ -98,91 +169,207 @@ def send_ems_command(finger):
         print(f"[EMS] Stimulation error: {e}")
 
 
-def vlm_loop(client, task_description, shared, lock, stop_event):
-    """Daemon thread: periodically send frames to Claude and execute decisions."""
-    system_prompt = (
-        "You are controlling an EMS (electrical muscle stimulation) system through a camera feed. "
-        "You observe the scene and decide whether to trigger EMS on a finger or do nothing.\n\n"
-        f"YOUR TASK: {task_description}\n\n"
-        "Available fingers: p=pinky, m=middle, i=index, x=all.\n"
-        "Call trigger_ems when the scene matches the task criteria. "
-        "Call do_nothing when it does not. You must call exactly one tool."
+def generate_plan(client, task_description, frame_b64):
+    """Send a frame to Claude and get back a JSON plan of steps."""
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=MAX_TOKENS,
+        system=PLANNING_PROMPT,
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": "image/jpeg",
+                            "data": frame_b64
+                        }
+                    },
+                    {
+                        "type": "text",
+                        "text": f"TASK: {task_description}\n\nObserve the current scene and create your step-by-step plan as a JSON array."
+                    }
+                ]
+            }
+        ]
     )
 
-    last_ems_time = 0.0
+    # Extract text content and parse JSON
+    raw_text = ""
+    for block in response.content:
+        if block.type == "text":
+            raw_text += block.text
 
-    while not stop_event.is_set():
-        time.sleep(API_INTERVAL)
+    print(f"[Debug] Raw plan response:\n{raw_text[:500]}")
+
+    return parse_json_response(raw_text)
+
+
+def check_before_step(client, task_description, step, frame_b64):
+    """Quick vision check: is the hand in position for the next step? Returns (ok, message)."""
+    desc = step.get("description", "")
+    action = step.get("action", "")
+    finger = step.get("finger", "")
+
+    step_summary = f"Next step: {action}"
+    if finger:
+        step_summary += f" finger={finger}"
+    step_summary += f" — {desc}"
+
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=128,
+        system=CHECK_PROMPT,
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": "image/jpeg",
+                            "data": frame_b64
+                        }
+                    },
+                    {
+                        "type": "text",
+                        "text": f"TASK: {task_description}\n\n{step_summary}\n\nIs the hand ready? Respond with JSON."
+                    }
+                ]
+            }
+        ]
+    )
+
+    raw_text = ""
+    for block in response.content:
+        if block.type == "text":
+            raw_text += block.text
+
+    result = parse_json_response(raw_text)
+    return result.get("ok", True), result.get("message", "")
+
+
+def execute_plan(client, task_description, plan, shared, lock, stop_event):
+    """Execute a prebuilt plan step by step with live vision checks before EMS steps."""
+    total = len(plan)
+    for i, step in enumerate(plan):
         if stop_event.is_set():
             break
 
-        # Grab latest frame
+        action = step.get("action", "wait")
+        delay = float(step.get("delay", 0))
+        desc = step.get("description", "")
+
+        # Update display with upcoming step
+        with lock:
+            shared["last_decision"] = f"[{i+1}/{total}] {desc}"
+            shared["step_info"] = f"Step {i+1}/{total}"
+
+        # Wait the specified delay before executing
+        if delay > 0:
+            print(f"[Plan] Waiting {delay}s before step {i+1}...")
+            wait_end = time.time() + delay
+            while time.time() < wait_end and not stop_event.is_set():
+                time.sleep(0.2)
+
+        if stop_event.is_set():
+            break
+
+        # Live vision check before EMS steps
+        if action == "ems":
+            with lock:
+                check_frame = shared.get("frame")
+            if check_frame is not None:
+                try:
+                    frame_b64 = encode_frame(check_frame)
+                    ok, correction = check_before_step(client, task_description, step, frame_b64)
+                    if not ok and correction:
+                        print(f"[Check] Hand not ready: {correction}")
+                        with lock:
+                            shared["last_decision"] = f"[{i+1}/{total}] CMD: {correction}"
+                        # Wait for human to reposition
+                        wait_end = time.time() + 5.0
+                        while time.time() < wait_end and not stop_event.is_set():
+                            time.sleep(0.2)
+                        if stop_event.is_set():
+                            break
+                except Exception as e:
+                    print(f"[Check] Vision check failed (proceeding anyway): {e}")
+
+        # Execute the step
+        if action == "ems":
+            finger = step.get("finger", "x")
+            print(f"[Plan] Step {i+1}/{total}: EMS finger={finger} - {desc}")
+            send_ems_command(finger)
+            with lock:
+                shared["last_decision"] = f"[{i+1}/{total}] EMS finger={finger}"
+
+        elif action == "text":
+            message = step.get("message", "")
+            print(f"[Plan] Step {i+1}/{total}: TEXT '{message}' - {desc}")
+            with lock:
+                shared["last_decision"] = f"[{i+1}/{total}] CMD: {message}"
+
+        elif action == "wait":
+            print(f"[Plan] Step {i+1}/{total}: WAIT - {desc}")
+
+    if not stop_event.is_set():
+        with lock:
+            shared["last_decision"] = "Plan complete!"
+            shared["step_info"] = "Done"
+        print("[Plan] All steps executed.")
+
+
+def vlm_loop(client, task_description, shared, lock, stop_event):
+    """Daemon thread: observe scene, generate plan, execute it."""
+    # Wait for first frame
+    while not stop_event.is_set():
         with lock:
             frame = shared.get("frame")
-        if frame is None:
-            continue
+        if frame is not None:
+            break
+        time.sleep(0.1)
 
-        # Encode frame
-        frame_b64 = encode_frame(frame)
+    if stop_event.is_set():
+        return
 
-        try:
-            response = client.messages.create(
-                model=MODEL,
-                max_tokens=MAX_TOKENS,
-                system=system_prompt,
-                tools=TOOLS,
-                tool_choice={"type": "any"},
-                messages=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "image",
-                                "source": {
-                                    "type": "base64",
-                                    "media_type": "image/jpeg",
-                                    "data": frame_b64
-                                }
-                            },
-                            {
-                                "type": "text",
-                                "text": "Analyze this frame and decide: should you trigger EMS or do nothing?"
-                            }
-                        ]
-                    }
-                ]
-            )
+    # Phase 1: Observe scene and generate plan
+    with lock:
+        shared["last_decision"] = "Observing scene..."
+        shared["step_info"] = "Planning"
+    print("[VLM] Capturing frame for planning...")
 
-            # Parse tool use from response
-            for block in response.content:
-                if block.type == "tool_use":
-                    tool_name = block.name
-                    tool_input = block.input
+    with lock:
+        frame = shared["frame"]
+    frame_b64 = encode_frame(frame)
 
-                    if tool_name == "trigger_ems":
-                        finger = tool_input.get("finger", "x")
-                        now = time.time()
-                        if now - last_ems_time >= EMS_COOLDOWN:
-                            print(f"[VLM] TRIGGER EMS -> finger={finger}")
-                            send_ems_command(finger)
-                            last_ems_time = now
-                            with lock:
-                                shared["last_decision"] = f"TRIGGER finger={finger}"
-                        else:
-                            remaining = EMS_COOLDOWN - (now - last_ems_time)
-                            print(f"[VLM] Cooldown active ({remaining:.1f}s remaining), skipping EMS")
-                            with lock:
-                                shared["last_decision"] = f"TRIGGER (cooldown, skipped)"
-                    elif tool_name == "do_nothing":
-                        print("[VLM] Do nothing")
-                        with lock:
-                            shared["last_decision"] = "Do nothing"
-                    break  # Only process first tool call
+    try:
+        print("[VLM] Sending frame to Claude for planning...")
+        plan = generate_plan(client, task_description, frame_b64)
+        print(f"[VLM] Plan received with {len(plan)} steps:")
+        for i, step in enumerate(plan):
+            print(f"  {i+1}. [{step.get('action')}] {step.get('description', '')} (delay: {step.get('delay', 0)}s)")
 
-        except Exception as e:
-            print(f"[VLM] API error: {e}")
-            with lock:
-                shared["last_decision"] = f"Error: {e}"
+        with lock:
+            shared["last_decision"] = f"Plan ready: {len(plan)} steps"
+            shared["step_info"] = "Executing"
+
+        time.sleep(1)  # Brief pause before execution starts
+
+        # Phase 2: Execute the plan with live checks
+        execute_plan(client, task_description, plan, shared, lock, stop_event)
+
+    except json.JSONDecodeError as e:
+        print(f"[VLM] Failed to parse plan JSON: {e}")
+        with lock:
+            shared["last_decision"] = "Error: bad plan format"
+    except Exception as e:
+        print(f"[VLM] API error: {e}")
+        with lock:
+            shared["last_decision"] = f"Error: {e}"
 
 
 def main():
@@ -210,7 +397,7 @@ def main():
         return
 
     # Shared state between threads
-    shared = {"frame": None, "last_decision": "Waiting..."}
+    shared = {"frame": None, "last_decision": "Waiting...", "step_info": ""}
     lock = threading.Lock()
     stop_event = threading.Event()
 
@@ -235,13 +422,22 @@ def main():
         with lock:
             shared["frame"] = frame.copy()
             last_decision = shared["last_decision"]
+            step_info = shared["step_info"]
 
-        # Overlay last decision on frame
-        color = (0, 0, 255) if "TRIGGER" in last_decision else (0, 255, 0)
-        cv2.putText(frame, f"VLM: {last_decision}", (10, 30),
+        # Overlay info on frame
+        if "EMS" in last_decision:
+            color = (0, 0, 255)
+        elif "CMD:" in last_decision:
+            color = (255, 200, 0)
+        else:
+            color = (0, 255, 0)
+        cv2.putText(frame, f"{last_decision}", (10, 30),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
         cv2.putText(frame, f"Task: {task_description[:60]}", (10, 60),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+        if step_info:
+            cv2.putText(frame, step_info, (10, 85),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (200, 200, 200), 1)
 
         cv2.imshow('VLM EMS Control', frame)
 
