@@ -9,10 +9,10 @@ def send_test_signal():
     # Direct hardware parameters in standardized format
     test_data = {
         "0": [
-            {"type": "GVS", "channel": 1, "amplitude": 6, "duration": 1.0, "frequency": 100}
+            {"type": "EMS", "channel": 1, "amplitude": 20, "duration": 1.0, "frequency": 100}
         ],
         "1.5": [
-            {"type": "GVS", "channel": 2, "amplitude": 6, "duration": 1.0, "frequency": 100}
+            {"type": "EMS", "channel": 2, "amplitude": 20, "duration": 1.0, "frequency": 100}
         ]
     }
     

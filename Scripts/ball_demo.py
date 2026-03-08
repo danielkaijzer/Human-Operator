@@ -24,12 +24,12 @@ EMS_COMMAND = {
 
 # HSV range for bright orange
 # Ball 1 Settings
-BALL_LOW = np.array([165, 125, 0])
-BALL_HIGH = np.array([255, 255, 255])
+# BALL_LOW = np.array([165, 125, 0])
+# BALL_HIGH = np.array([255, 255, 255])
 
 # Ball 2 Settings
-# BALL_LOW = np.array([0, 100, 0])
-# BALL_HIGH = np.array([5, 255, 255])
+BALL_LOW = np.array([0, 100, 0])
+BALL_HIGH = np.array([5, 255, 255])
 
 # TODO: Play around with these parameters
 MIN_CONTOUR_AREA = 1000       # ignore small noise
