@@ -16,14 +16,14 @@ from utils.prompts import SYSTEM_PROMPT, PLANNING_PROMPT, CHECK_PROMPT
 STREAM_URL = "https://technique-bool-wiley-african.trycloudflare.com/video"
 RECEIVER_URL = "https://amsterdam-river-lease-toolbox.trycloudflare.com/execute"
 
-# Template image for testing (when stream is unavailable)
-TEMPLATE_IMAGE_WIDTH = 640
-TEMPLATE_IMAGE_HEIGHT = 480
-
 # EMS defaults
 EMS_AMPLITUDE = 60
 EMS_DURATION = 1.0
 EMS_FREQUENCY = 100
+
+# Template image for testing (when stream is unavailable)
+TEMPLATE_IMAGE_WIDTH = 640
+TEMPLATE_IMAGE_HEIGHT = 480
 
 
 def get_latest_frame() -> bytes:
