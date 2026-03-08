@@ -17,7 +17,7 @@ import serial.tools.list_ports
 # }
 # Import the existing stimulator class
 try:
-    from hcint_estim import HCIntEstim
+    from hcint_estim import HCIntEstim # type: ignore
 except ImportError:
     class HCIntEstim:
         def __init__(self, port=None, baudrate=115200, timeout=1):
