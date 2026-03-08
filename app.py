@@ -8,64 +8,64 @@ import json
 import time
 import threading
 import requests
-import numpy as np
 from utils.llm import LLMClient
 from utils.speech import VoiceCommandListener
 from utils.prompts import SYSTEM_PROMPT, PLANNING_PROMPT, CHECK_PROMPT
 
-STREAM_URL = "https://technique-bool-wiley-african.trycloudflare.com/video"
-RECEIVER_URL = "https://amsterdam-river-lease-toolbox.trycloudflare.com/execute"
+RECEIVER_URL = "https://cartridges-abc-pilot-scan.trycloudflare.com/execute"
+
+# Camera config
+CAMERA_INDEX = 0
+FRAME_RESIZE = (512, 384)
+JPEG_QUALITY = 60
 
 # EMS defaults
 EMS_AMPLITUDE = 60
 EMS_DURATION = 1.0
 EMS_FREQUENCY = 100
-
-# Template image for testing (when stream is unavailable)
-TEMPLATE_IMAGE_WIDTH = 640
-TEMPLATE_IMAGE_HEIGHT = 480
+EMS_PULSE_WIDTH = 1000
 
 
 def get_latest_frame() -> bytes:
     """
-    Capture the latest frame from the video stream.
-    Falls back to a red template image if stream is unavailable (for testing).
+    Capture the latest frame from the local camera with retry logic.
     """
-    try:
-        # Open the stream
-        cap = cv2.VideoCapture(STREAM_URL)
-        
-        if not cap.isOpened():
-            raise Exception("Failed to open video stream")
-        
-        # Read one frame
-        ret, frame = cap.read()
-        cap.release()
-        
-        if not ret:
-            raise Exception("Failed to read frame from stream")
-        
-        # Encode frame as JPEG
-        _, buffer = cv2.imencode('.jpg', frame)
-        return buffer.tobytes()
+    max_retries = 3
     
-    except Exception as e:
-        print(f"[!] Error getting frame from stream: {e}")
-        print("[*] Using red template image for testing...")
+    for attempt in range(max_retries):
+        try:
+            cap = cv2.VideoCapture(CAMERA_INDEX)
+            
+            if not cap.isOpened():
+                if attempt < max_retries - 1:
+                    print(f"[!] Camera not opened (attempt {attempt+1}/{max_retries}), retrying...")
+                    time.sleep(0.5)
+                    continue
+                else:
+                    raise Exception(f"Failed to open camera {CAMERA_INDEX} after {max_retries} attempts")
+            
+            ret, frame = cap.read()
+            cap.release()
+            
+            if not ret:
+                if attempt < max_retries - 1:
+                    print(f"[!] Failed to read frame (attempt {attempt+1}/{max_retries}), retrying...")
+                    time.sleep(0.5)
+                    continue
+                else:
+                    raise Exception(f"Failed to read frame from camera after {max_retries} attempts")
+            
+            # Resize and encode with quality settings (matching vlm_test.py approach)
+            resized = cv2.resize(frame, FRAME_RESIZE)
+            encode_params = [cv2.IMWRITE_JPEG_QUALITY, JPEG_QUALITY]
+            _, buffer = cv2.imencode('.jpg', resized, encode_params)
+            return buffer.tobytes()
         
-        # Create a red template image for testing
-        template_frame = np.zeros((TEMPLATE_IMAGE_HEIGHT, TEMPLATE_IMAGE_WIDTH, 3), dtype='uint8')
-        template_frame[:, :] = (0, 0, 255)  # Red in BGR format
-        
-        # Add white text
-        cv2.putText(template_frame, "TEMPLATE IMAGE", (int(TEMPLATE_IMAGE_WIDTH * 0.15), int(TEMPLATE_IMAGE_HEIGHT * 0.5)),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 2)
-        cv2.putText(template_frame, "Video stream offline", (int(TEMPLATE_IMAGE_WIDTH * 0.1), int(TEMPLATE_IMAGE_HEIGHT * 0.65)),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 1)
-        
-        # Encode as JPEG
-        _, buffer = cv2.imencode('.jpg', template_frame)
-        return buffer.tobytes()
+        except Exception as e:
+            if attempt == max_retries - 1:
+                print(f"[!] Error getting frame from camera: {e}")
+                raise
+            time.sleep(0.5)
 
 
 
@@ -171,7 +171,7 @@ def transform_actions_to_receiver_format(claude_response: dict) -> dict:
             # Skip unsupported actions (biceps, lean, etc.)
             if finger_code in ["wrist_right", "biceps_flex", "lean_left", "lean_right"]:
                 print(f"[!] Skipping unsupported action: {action_name}")
-                current_time += float(duration) + 0.5
+                current_time += float(duration) + 1.0
                 continue
 
             if time_key not in receiver_format:
@@ -184,7 +184,8 @@ def transform_actions_to_receiver_format(claude_response: dict) -> dict:
                     "channel": 2,
                     "amplitude": EMS_AMPLITUDE,
                     "duration": float(duration),
-                    "frequency": EMS_FREQUENCY
+                    "frequency": EMS_FREQUENCY,
+                    "pulse_width": EMS_PULSE_WIDTH
                 })
             else:
                 # Finger actions: send RELAY first (finger select), then EMS on channel 1
@@ -197,11 +198,19 @@ def transform_actions_to_receiver_format(claude_response: dict) -> dict:
                     "channel": 1,
                     "amplitude": EMS_AMPLITUDE,
                     "duration": float(duration),
-                    "frequency": EMS_FREQUENCY
+                    "frequency": EMS_FREQUENCY,
+                    "pulse_width": EMS_PULSE_WIDTH
                 })
             
-            # Move to next action time (current duration + small buffer)
-            current_time += float(duration) + 0.5
+            # Move to next action time (current duration + 1 second buffer for relay to open)
+            current_time += float(duration) + 1.0
+    
+    # Always append "x" command (disable all fingers) at the end
+    final_time = str(current_time)
+    receiver_format[final_time] = [{
+        "type": "RELAY",
+        "finger": "x"
+    }]
     
     return receiver_format
 
@@ -306,8 +315,8 @@ def execute_motor_commands(receiver_payload: dict):
 
 
 def main():
-    """Main loop: listen for voice commands and process with video frames."""
-    print(f"Connecting to stream: {STREAM_URL}")
+    """Main loop: listen for voice commands and process with local camera frames."""
+    print(f"Using camera index {CAMERA_INDEX}")
     print("Starting voice listener...\n")
     
     # Start voice listener in background thread
