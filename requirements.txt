@@ -25,3 +25,6 @@ pynput
 
 # stt
 realtimestt
+
+# server
+flask
