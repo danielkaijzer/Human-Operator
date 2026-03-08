@@ -9,12 +9,13 @@ import serial.tools.list_ports
 # {
 #   "0.0": [
 #     {"type": "RELAY", "finger": "i"},
-#     {"type": "ET", "channel": 1, "amplitude": 12, "duration": 1.0}
+#     {"type": "EMS", "channel": 1, "amplitude": 60, "duration": 1.0, "frequency": 100}
 #   ],
 #   "1.5": [
 #     {"type": "RELAY", "finger": "x"}
 #   ]
 # }
+# Note: Channel 1 = finger actions (require RELAY first), Channel 2 = wrist left (no relay needed)
 # Import the existing stimulator class
 try:
     from hcint_estim import HCIntEstim # type: ignore

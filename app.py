@@ -81,7 +81,7 @@ def action_to_finger_mapping(action: str) -> str:
     
     Only these codes are supported by receiver.py relay control.
     
-    Wrist actions will be mapped when receiver.py is updated to support them.
+    Wrist left uses EMS channel 2 directly (no relay needed).
     """
     mapping = {
         "clench_hand": "x",      # reset/end sequence
@@ -91,7 +91,6 @@ def action_to_finger_mapping(action: str) -> str:
         "close_thumb": "i",      # grouped with index as thumb+index grip
         # Wrist actions - keep mapped but receiver needs update:
         "wrist_left": "wrist_left",
-        "wrist_right": "wrist_right",
         # These are NOT relay-compatible and will be skipped:
         # "close_ring": not supported by hardware
         # "biceps_flex": requires different command type
@@ -139,7 +138,8 @@ def transform_actions_to_receiver_format(claude_response: dict) -> dict:
     Timing logic:
     - Each action starts at cumulative_time (sum of all previous durations)
     - Duration in the action is how long the EMS stimulation lasts
-    - Unsupported actions (wrist, biceps, lean) are logged but not sent
+    - wrist_left uses EMS channel 2 only (no relay command)
+    - Unsupported actions (biceps, lean) are logged but not sent
     """
     receiver_format = {}
     current_time = 0.0
@@ -168,29 +168,37 @@ def transform_actions_to_receiver_format(claude_response: dict) -> dict:
             # Create timestamped entry key
             time_key = str(current_time)
             
-            # Skip unsupported actions (wrist, biceps, lean)
-            if finger_code in ["wrist_left", "wrist_right", "biceps_flex", "lean_left", "lean_right"]:
-                print(f"[!] Skipping unsupported action: {action_name} (will be supported in receiver update)")
+            # Skip unsupported actions (biceps, lean, etc.)
+            if finger_code in ["wrist_right", "biceps_flex", "lean_left", "lean_right"]:
+                print(f"[!] Skipping unsupported action: {action_name}")
                 current_time += float(duration) + 0.5
                 continue
-            
+
             if time_key not in receiver_format:
                 receiver_format[time_key] = []
-            
-            # Send RELAY first (finger select)
-            receiver_format[time_key].append({
-                "type": "RELAY",
-                "finger": finger_code
-            })
-            
-            # Then send EMS with the action's duration
-            receiver_format[time_key].append({
-                "type": "EMS",
-                "channel": 1,
-                "amplitude": EMS_AMPLITUDE,
-                "duration": float(duration),
-                "frequency": EMS_FREQUENCY
-            })
+
+            # Wrist left: EMS on channel 2 only (no relay needed)
+            if finger_code == "wrist_left":
+                receiver_format[time_key].append({
+                    "type": "EMS",
+                    "channel": 2,
+                    "amplitude": EMS_AMPLITUDE,
+                    "duration": float(duration),
+                    "frequency": EMS_FREQUENCY
+                })
+            else:
+                # Finger actions: send RELAY first (finger select), then EMS on channel 1
+                receiver_format[time_key].append({
+                    "type": "RELAY",
+                    "finger": finger_code
+                })
+                receiver_format[time_key].append({
+                    "type": "EMS",
+                    "channel": 1,
+                    "amplitude": EMS_AMPLITUDE,
+                    "duration": float(duration),
+                    "frequency": EMS_FREQUENCY
+                })
             
             # Move to next action time (current duration + small buffer)
             current_time += float(duration) + 0.5
