@@ -1,0 +1,14 @@
+name: human-operator
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+      - anthropic
+      - numpy
+      - opencv-python
+      - python-dotenv
+      - pynput
+      - realtimestt
+      - flask
