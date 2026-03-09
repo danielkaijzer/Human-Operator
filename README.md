@@ -6,6 +6,8 @@
 # HumanOperator
 A Human Augmentation Tool for On-Body Intelligence with EMS. Winning project at MIT Hard Mode 2026 for the Learn track.
 
+Shoutout to the HCI Group at UChicago for their papers and software systems that inspired a lot of our work.  
+
 ## Project Setup
 **Pre-requisites** – Before we get started, make sure to install the following:
    1. Conda *(or miniconda)*
