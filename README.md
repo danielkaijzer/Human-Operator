@@ -3,7 +3,10 @@
   <br>
 </p>
 
+
 # HumanOperator
+![wytDSC00747](https://github.com/user-attachments/assets/70bae2e8-b78c-4ce7-b910-94a5cd008b63)
+
 A Human Augmentation Tool for On-Body Intelligence with EMS. Winning project at MIT Hard Mode 2026 for the Learn track.
 
 Shoutout to the HCI Group at UChicago for their papers and software systems that inspired a lot of our work.  
