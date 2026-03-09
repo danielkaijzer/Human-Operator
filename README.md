@@ -89,6 +89,6 @@ Once you've cloned the repository, do the following to configure the system for 
 4.  Run HumanOperator for _obstacle avoidance_ demo (e.g. avoiding a _ball_ flying toward the user):
     * python utils/ball_demo.py
   
-### Thanks
+## Thanks
 Shoutout to the HCI Group at UChicago for their papers and software systems that inspired a lot of our work (and electrode placement)
 
