@@ -9,7 +9,15 @@
 
 A Human Augmentation Tool for On-Body Intelligence with EMS. Winning project at MIT Hard Mode 2026 for the Learn track.
 
-Shoutout to the HCI Group at UChicago for their papers and software systems that inspired a lot of our work.  
+### Team
+- **Peter He** - [Portfolio](https://peterhe.dev) | [Github](https://github.com/molegod) | [Linkedin](https://www.linkedin.com/in/ph475/)
+- **Valdemar Danry** - [Portfolio]() | [Github]() | [Linkedin]()
+- **Daniel Kaijzer** - [Portfolio]() | [Github]() | [Linkedin]() 
+- **Yutong Wu** - [Portfolio]() | [Github]() | [Linkedin]() 
+- **Ashley Neall** - [Portfolio]() | [Github]() | [Linkedin]()
+- **Sean Lewis** - [Portfolio]() | [Github]() | [Linkedin]() 
+
+
 
 ## Project Setup
 **Pre-requisites** – Before we get started, make sure to install the following:
@@ -39,10 +47,22 @@ Once you've cloned the repository, do the following to configure the system for 
     * conda activate human-operator
 
 ### Hardware
+
+#### Human Operator Wearable:
 * **Electrical Muscle Stimulation (EMS) Electrodes**
-    * [add]
+    * [Normal TENS Unit Gel Electrodes](https://www.amazon.com/dp/B0BL2HR17G?th=1)
+    
 * **Microcontroller**
-    * [add]
+    * Arduino Micro Based Board for Relay.
+    
+* **Relays**
+    * [5V Relays](https://www.amazon.com/dp/B09G6H7JDT)
+    * A photomosfet may be better suited for switching but these relays do work as well but slower.
+    
+* **TENS/EMS Unit**
+    * A custom board was used, but any TENS/EMS unit that is controllable to be on and off electronically can be used to replicate this project. Modifications may be needed for them to be controlled electronically. 
+
+### Glasses
 * **Camera Module**
     * [add]
 
@@ -68,3 +88,7 @@ Once you've cloned the repository, do the following to configure the system for 
 
 4.  Run HumanOperator for _obstacle avoidance_ demo (e.g. avoiding a _ball_ flying toward the user):
     * python utils/ball_demo.py
+  
+### Thanks
+Shoutout to the HCI Group at UChicago for their papers and software systems that inspired a lot of our work (and electrode placement)
+
