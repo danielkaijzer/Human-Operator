@@ -1,5 +1,10 @@
+<p align="left">
+  <img src="https://img.shields.io/badge/Winner-MIT%20Hard%20Mode%202026-gold?style=for-the-badge&logo=mit&logoColor=white" alt="MIT Winner Badge">
+  <br>
+</p>
+
 # HumanOperator
-A Human Augmentation Tool for On-Body Intelligence with EMS
+A Human Augmentation Tool for On-Body Intelligence with EMS. Winning project at MIT Hard Mode 2026 for the Learn track.
 
 ## Project Setup
 **Pre-requisites** – Before we get started, make sure to install the following:
