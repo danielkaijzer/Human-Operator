@@ -4,10 +4,11 @@
 </p>
 
 
-# HumanOperator
-![wytDSC00747](https://github.com/user-attachments/assets/70bae2e8-b78c-4ce7-b910-94a5cd008b63)
+<img width="1200" height="628" alt="image" src="https://github.com/user-attachments/assets/581d8f0a-ff4f-443f-bf0b-99a2538cd598" />
 
+<p align="center">
 A Human Augmentation Tool for On-Body Intelligence with EMS. Winning project at MIT Hard Mode 2026 for the Learn track.
+</p>
 
 ### Team
 - **Peter He** - [Portfolio](https://peterhe.dev) | [Github](https://github.com/molegod) | [Linkedin](https://www.linkedin.com/in/ph475/)
