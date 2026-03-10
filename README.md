@@ -1,7 +1,7 @@
 <p align="left">
   <img src="https://img.shields.io/badge/Winner-MIT%20Hard%20Mode%202026-gold?style=for-the-badge&logo=mit&logoColor=white" alt="MIT Winner Badge">
+  <img src="https://img.shields.io/badge/Watch-YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="Video">
 </p>
-
 <p align="center">
   <img width="1200" height="628" alt="Human Operator" src="https://github.com/user-attachments/assets/581d8f0a-ff4f-443f-bf0b-99a2538cd598" />
 </p>
@@ -12,6 +12,8 @@ A Human Augmentation Tool for On-Body Intelligence with EMS. Winning project at 
 **Human Operator** is a human augmentation tool that allows AI to briefly take control of your body to help you learn and do things you normally cannot do. To do this, it uses a Vision-Language Model for human motor control through Electrical Muscle Stimulation (EMS). Vision-based commands are generated via open-ended speech input through the Claude API to control finger and wrist stimulation for intuitive on-body interaction.
 
 **:trophy: Winning project at MIT Hard Mode 2026 (Learn Track) :trophy:**
+
+[Watch Demo](https://www.youtube.com/watch?v=JpiPKwkBz4c)
 
 ## Team
 
