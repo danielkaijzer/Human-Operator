@@ -21,7 +21,7 @@ A Human Augmentation Tool for On-Body Intelligence with EMS. Winning project at 
   <p><sub>Left to right: AI stimulates wrist muscle to say 'Hello' back • AI stimulates fingers in sequence to play melody • AI stimulates fingers to form 'OK' sign</sub></p>
 </div>
 
-[Watch Full Video Demo](https://www.youtube.com/watch?v=JpiPKwkBz4c)
+[Watch Full Video Demo](https://youtu.be/fCLxENGs7CY?si=noS9cT161CwEFh5Q)
 
 ## Team
 - **Peter He** – [Portfolio](https://peterhe.dev) | [GitHub](https://github.com/molegod) | [LinkedIn](https://www.linkedin.com/in/ph475/)
