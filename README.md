@@ -24,12 +24,12 @@ A Human Augmentation Tool for On-Body Intelligence with EMS. Winning project at 
 [Watch Full Video Demo](https://www.youtube.com/watch?v=JpiPKwkBz4c)
 
 ## Team
-
 - **Peter He** – [Portfolio](https://peterhe.dev) | [GitHub](https://github.com/molegod) | [LinkedIn](https://www.linkedin.com/in/ph475/)
+- **Ashley Neall** – [Portfolio](https://aneall.github.io/) | [GitHub](https://github.com/aneall) | [LinkedIn](https://www.linkedin.com/in/ashley-neall/)
 - **Valdemar Danry** – [Portfolio](https://valdemardanry.com) | [GitHub](https://github.com/valleballe) | [LinkedIn](https://www.linkedin.com/in/valdemar-danry)
-- **Daniel Kaijzer** - [Portfolio]() | [Github]() | [Linkedin]() 
-- **Yutong Wu** - [Portfolio]() | [Github]() | [Linkedin]() 
-- **Sean Lewis** - [Portfolio]() | [Github]() | [Linkedin]() 
+- **Daniel Kaijzer** - [Portfolio]() | [Github](https://github.com/danielkaijzer) | [Linkedin](https://www.linkedin.com/in/danielkaijzer/) 
+- **Yutong Wu** - [Portfolio]() | [Github](https://github.com/ichbinHallie0426) | [Linkedin](https://www.linkedin.com/in/yutong-wu-4b66661b5/) 
+- **Sean Lewis** - [Portfolio](https://seanhardestylewis.com/) | [Github](https://github.com/seanhlewis) | [Linkedin](https://www.linkedin.com/in/seanhardestylewis/) 
 
 ## Prerequisites
 
@@ -156,3 +156,5 @@ python utils/ball_demo.py
 Inspired by research and systems from the [Human Computer Integration Lab](https://lab.plopes.org/) at UChicago on neuromuscular interfaces and electrode placement optimization:
 * [Full-Hand Electro Tactile Feedback without Obstructing Palmar Side of Hand](https://github.com/humancomputerintegration/BOH-Electro-Tactile)
 * [Generative Muscle Stimulation: Providing Users with Physical Assistance by Constraining Multimodal-AI with Embodied Knowledge](https://arxiv.org/pdf/2505.10648)
+* [Increasing Electrical Muscle Stimulation’s Dexterity by means of
+Back of the Hand Actuation](https://lab.plopes.org/published/2021-CHI-BackHandEMS.pdf)
