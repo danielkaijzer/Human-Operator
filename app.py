@@ -12,7 +12,7 @@ from utils.llm import LLMClient
 from utils.speech import VoiceCommandListener
 from utils.prompts import SYSTEM_PROMPT, PLANNING_PROMPT, CHECK_PROMPT
 
-RECEIVER_URL = "https://cartridges-abc-pilot-scan.trycloudflare.com/execute"
+RECEIVER_URL = "https://writing-theorem-secret-publicity.trycloudflare.com/execute"
 
 # Camera config
 CAMERA_INDEX = 0
@@ -315,9 +315,16 @@ def execute_motor_commands(receiver_payload: dict):
 
 
 def main():
-    """Main loop: listen for voice commands and process with local camera frames."""
+    """Main loop: display live camera feed and listen for voice commands."""
     print(f"Using camera index {CAMERA_INDEX}")
     print("Starting voice listener...\n")
+    print("Press 'q' to quit\n")
+    
+    # Open camera
+    cap = cv2.VideoCapture(CAMERA_INDEX)
+    if not cap.isOpened():
+        print(f"[!] Error: Could not open camera {CAMERA_INDEX}")
+        return
     
     # Start voice listener in background thread
     listener = VoiceCommandListener(on_command_ready=on_command_ready)
@@ -325,11 +332,31 @@ def main():
     voice_thread.start()
     
     try:
-        # Keep main thread alive
         while True:
-            time.sleep(1)
+            ret, frame = cap.read()
+            if not ret:
+                print("[!] Failed to read frame from camera")
+                break
+            
+            # Overlay status text
+            cv2.putText(frame, "Listening for voice commands...", (10, 30),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+            cv2.putText(frame, "Press 'q' to quit", (10, 60),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (200, 200, 200), 1)
+            
+            # Display frame
+            cv2.imshow('Camera Feed', frame)
+            
+            # Check for 'q' key to quit
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+            
     except KeyboardInterrupt:
-        print("\n[*] Exiting...")
+        print("\n[*] Interrupted")
+    finally:
+        cap.release()
+        cv2.destroyAllWindows()
+        print("[*] Exiting...")
 
 
 if __name__ == "__main__":
