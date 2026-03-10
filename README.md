@@ -29,14 +29,13 @@ A Human Augmentation Tool for On-Body Intelligence with EMS. Winning project at 
 - **Valdemar Danry** – [Portfolio](https://valdemardanry.com) | [GitHub](https://github.com/valleballe) | [LinkedIn](https://www.linkedin.com/in/valdemar-danry)
 - **Daniel Kaijzer** - [Portfolio]() | [Github]() | [Linkedin]() 
 - **Yutong Wu** - [Portfolio]() | [Github]() | [Linkedin]() 
-- **Ashley Neall** - [Portfolio]() | [Github]() | [Linkedin]()
 - **Sean Lewis** - [Portfolio]() | [Github]() | [Linkedin]() 
 
 ## Prerequisites
 
 - **Python 3.10.x**
 - **Conda**, **Miniconda** or other environment setup
-- **Arduino IDE 2.3+** (for firmware setup)
+- **Arduino IDE 2.3.x** (for firmware setup)
 - **Claude API key** (from Anthropic)
 
 ## Hardware Setup
@@ -154,5 +153,6 @@ python utils/ball_demo.py
 
 ## Acknowledgments
 
-Inspired by research and systems from the HCI Group at UChicago on neuromuscular interfaces and electrode placement optimization.
-
+Inspired by research and systems from the [Human Computer Integration Lab](https://lab.plopes.org/) at UChicago on neuromuscular interfaces and electrode placement optimization:
+* [Full-Hand Electro Tactile Feedback without Obstructing Palmar Side of Hand](https://github.com/humancomputerintegration/BOH-Electro-Tactile)
+* [Generative Muscle Stimulation: Providing Users with Physical Assistance by Constraining Multimodal-AI with Embodied Knowledge](https://arxiv.org/pdf/2505.10648)
