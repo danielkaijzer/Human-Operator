@@ -1,21 +1,3 @@
-# aria
-# Requires Python 3.9–3.12 (not 3.13/3.14)
-# projectaria_client_sdk 2.2.0 has a binary incompatibility with projectaria-tools 2.1.1 (latest on PyPI)
-# Use: pip install projectaria_client_sdk --no-cache-dir and check the installed version resolves correctly
-# projectaria_client_sdk
-# projectaria-tools==2.1.1
-# setuptools
-# fastplotlib
-# pyside6
-# glfw
-# torch
-
-# # eyetracking
-# easydict 
-# pyyaml
-# torchvision
-# pupil-detectors
-
 # llm
 anthropic
 numpy
@@ -28,3 +10,6 @@ realtimestt
 
 # server
 flask
+
+# manual control app
+PyQt5
