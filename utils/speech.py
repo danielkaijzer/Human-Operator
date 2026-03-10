@@ -7,9 +7,9 @@ import threading
 # Initialize pygame mixer for audio playback
 pygame.mixer.init()
 
-TRIGGER_WORD = "hey"
+TRIGGER_WORD = "hey operator"
 VERIFY_SOUND = "audio/verify.mp3"
-SILENCE_THRESHOLD = 0.5  # seconds
+SILENCE_THRESHOLD = 1.0  # seconds
 
 
 class VoiceCommandListener:
