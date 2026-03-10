@@ -9,8 +9,7 @@ Finger Control
 - 'close_middle'
 - 'close_pinky'
 Wrist and Hand Control
-- 'wrist_left' # moving hand left
-- 'wrist_right' # moving hand right
+- 'wrist_left' # move hand temporarily left
 
 JSON structure for sequence of actions:
 {
@@ -25,6 +24,7 @@ Instructions:
 - Respond based on what you see in the POV image
 - Durations in seconds (float values)
 - Only include actions you want to do
+- duration_seconds can minimum 1.0
 """
 
 PLANNING_PROMPT = """You are an AI that controls a human's RIGHT hand via EMS (electrical muscle stimulation). \
