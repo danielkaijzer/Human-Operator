@@ -12,7 +12,7 @@ A Human Augmentation Tool for On-Body Intelligence with EMS. Winning project at 
 
 ### Team
 - **Peter He** - [Portfolio](https://peterhe.dev) | [Github](https://github.com/molegod) | [Linkedin](https://www.linkedin.com/in/ph475/)
-- **Valdemar Danry** - [Portfolio]() | [Github]() | [Linkedin]()
+- **Valdemar Danry** - [Portfolio](https://valdemardanry.com) | [Github](valleballe) | [Linkedin](https://www.linkedin.com/in/valdemar-danry)
 - **Daniel Kaijzer** - [Portfolio]() | [Github]() | [Linkedin]() 
 - **Yutong Wu** - [Portfolio]() | [Github]() | [Linkedin]() 
 - **Ashley Neall** - [Portfolio]() | [Github]() | [Linkedin]()
