@@ -29,7 +29,7 @@ A Human Augmentation Tool for On-Body Intelligence with EMS. Winning project at 
 - **Daniel Kaijzer** - [Portfolio]() | [Github](https://github.com/danielkaijzer) | [Linkedin](https://www.linkedin.com/in/danielkaijzer/) 
 - **Yutong Wu** - [Portfolio]() | [Github](https://github.com/ichbinHallie0426) | [Linkedin](https://www.linkedin.com/in/yutong-wu-4b66661b5/) 
 - **Ashley Neall** – [Portfolio](https://aneall.github.io/) | [GitHub](https://github.com/aneall) | [LinkedIn](https://www.linkedin.com/in/ashley-neall/)
-- **Sean Lewis** - [Portfolio](https://seanhardestylewis.com/) | [Github](https://github.com/seanhlewis) | [Linkedin](https://www.linkedin.com/in/seanhardestylewis/) 
+- **Sean Hardesty Lewis** - [Portfolio](https://seanhardestylewis.com/) | [Github](https://github.com/seanhlewis) | [Linkedin](https://www.linkedin.com/in/seanhardestylewis/) 
 
 ## Prerequisites
 
