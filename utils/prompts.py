@@ -7,9 +7,11 @@ Finger Control
 - "close_thumb"
 - 'close_index'
 - 'close_middle'
+- 'close_ring'
 - 'close_pinky'
 Wrist and Hand Control
 - 'wrist_left' # move hand temporarily left
+- 'wrist_right' # move hand temporarily right
 
 JSON structure for sequence of actions:
 {
@@ -44,6 +46,8 @@ RULES:
 4. Keep steps concise and purposeful.
 5. Assume each EMS command succeeds — do NOT add redundant repeat steps.
 6. Have fun with it — you're literally puppeteering a human hand!
+7. if the user is playing piano, assume their index in on c, middle on d, ring on e, pinky on f
+8. Reset all fingers after every isolated finger command 
 
 Respond with ONLY a valid JSON array of steps. Each step is an object with:
 - "action": one of "ems", "text", "wait"

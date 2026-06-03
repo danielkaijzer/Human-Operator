@@ -237,20 +237,23 @@ class StimulationGUI(QWidget):
             QPushButton:checked { background-color: #FFFFFF; color: #000000; font-weight: bold; }
         """
         
-        self.btn_pinky = QPushButton("PINKY (P)")
-        self.btn_pinky.setStyleSheet(relay_btn_style)
-        self.btn_pinky.setCheckable(True)
-        self.btn_pinky.clicked.connect(lambda: self.send_relay_command('p'))
-        
-        self.btn_middle = QPushButton("MIDDLE (M)")
-        self.btn_middle.setStyleSheet(relay_btn_style)
-        self.btn_middle.setCheckable(True)
-        self.btn_middle.clicked.connect(lambda: self.send_relay_command('m'))
-        
-        self.btn_index = QPushButton("INDEX (I)")
-        self.btn_index.setStyleSheet(relay_btn_style)
-        self.btn_index.setCheckable(True)
-        self.btn_index.clicked.connect(lambda: self.send_relay_command('i'))
+        self.relay_target_buttons = []
+
+        def make_relay_button(label, command):
+            button = QPushButton(label)
+            button.setStyleSheet(relay_btn_style)
+            button.setCheckable(True)
+            button.clicked.connect(lambda: self.select_relay_target(button, command))
+            self.relay_target_buttons.append(button)
+            return button
+
+        self.btn_wrist_left = make_relay_button("WRIST LEFT (W)", "wrist_left")
+        self.btn_wrist_right = make_relay_button("WRIST RIGHT (Q)", "wrist_right")
+        self.btn_thumb = make_relay_button("THUMB (T)", "thumb")
+        self.btn_index = make_relay_button("INDEX (I)", "index")
+        self.btn_middle = make_relay_button("MIDDLE (M)", "middle")
+        self.btn_ring = make_relay_button("RING (R)", "ring")
+        self.btn_pinky = make_relay_button("PINKY (P)", "pinky")
         
         self.btn_all_off = QPushButton("ISOLATE (X)")
         self.btn_all_off.setStyleSheet("""
@@ -260,10 +263,14 @@ class StimulationGUI(QWidget):
         """)
         self.btn_all_off.clicked.connect(self.isolate_relays)
 
-        relay_control_layout.addWidget(self.btn_pinky, 0, 0)
-        relay_control_layout.addWidget(self.btn_middle, 0, 1)
-        relay_control_layout.addWidget(self.btn_index, 1, 0)
-        relay_control_layout.addWidget(self.btn_all_off, 1, 1)
+        relay_control_layout.addWidget(self.btn_wrist_left, 0, 0)
+        relay_control_layout.addWidget(self.btn_wrist_right, 0, 1)
+        relay_control_layout.addWidget(self.btn_thumb, 1, 0)
+        relay_control_layout.addWidget(self.btn_index, 1, 1)
+        relay_control_layout.addWidget(self.btn_middle, 2, 0)
+        relay_control_layout.addWidget(self.btn_ring, 2, 1)
+        relay_control_layout.addWidget(self.btn_pinky, 3, 0)
+        relay_control_layout.addWidget(self.btn_all_off, 3, 1)
         
         relay_control_group.setLayout(relay_control_layout)
         right_panel_layout.addWidget(relay_control_group)
@@ -384,7 +391,8 @@ class StimulationGUI(QWidget):
     def send_relay_command(self, cmd):
         if self.relay_serial and self.relay_serial.is_open:
             try:
-                self.relay_serial.write(cmd.encode('utf-8'))
+                self.relay_serial.write(f"{cmd}\n".encode('utf-8'))
+                self.relay_serial.flush()
             except serial.SerialException as e:
                 QMessageBox.critical(self, "LINK LOST", f"Connection to Relay MCU dropped: {str(e)}")
                 self.relay_serial.close()
@@ -394,11 +402,15 @@ class StimulationGUI(QWidget):
         else:
             QMessageBox.warning(self, "OFFLINE", "Awaiting relay initialization.")
 
+    def select_relay_target(self, selected_button, command):
+        for button in self.relay_target_buttons:
+            button.setChecked(button is selected_button)
+        self.send_relay_command(command)
+
     def isolate_relays(self):
-        # Visually uncheck the finger buttons
-        self.btn_pinky.setChecked(False)
-        self.btn_middle.setChecked(False)
-        self.btn_index.setChecked(False)
+        # Visually uncheck all target buttons
+        for button in self.relay_target_buttons:
+            button.setChecked(False)
         
         # Send the isolation command to the MCU
         self.send_relay_command('x')

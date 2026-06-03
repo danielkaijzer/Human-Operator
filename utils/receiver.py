@@ -5,6 +5,7 @@ import time
 import serial
 import serial.tools.list_ports
 
+
 # data structure
 # {
 #   "0.0": [
@@ -15,7 +16,8 @@ import serial.tools.list_ports
 #     {"type": "RELAY", "finger": "x"}
 #   ]
 # }
-# Note: Channel 1 = finger actions (require RELAY first), Channel 2 = wrist left (no relay needed)
+# Note: EMS uses channel 1. Relay selects which electrode path is active.
+# Relay commands can be: wrist_left, wrist_right, thumb, index, middle, ring, pinky, x
 # Import the existing stimulator class
 try:
     from hcint_estim import HCIntEstim # type: ignore
@@ -51,7 +53,7 @@ except ImportError:
 
 # New Relay Controller Class
 class RelayController:
-    def __init__(self, port=None, baudrate=115200, timeout=1):
+    def __init__(self, port=None, baudrate=115200, timeout=0.1):
         self.port = port
         self.ser = None
         self.error = None
@@ -60,21 +62,69 @@ class RelayController:
                 self.ser = serial.Serial(port, baudrate, timeout=timeout)
                 time.sleep(1.5)  # Let the Arduino reset and boot
                 print(f"✅ Connected to relay MCU on {port}")
+                for line in self._read_available_lines(max_wait=0.8):
+                    print(f"↩️ [RELAY BOOT] {line}")
             except Exception as e:
                 self.error = str(e)
                 print(f"❌ RELAY SERIAL CONNECTION ERROR: {e}")
+
+    def _read_available_lines(self, max_wait=0.25):
+        if not (self.ser and self.ser.is_open):
+            return []
+
+        lines = []
+        deadline = time.time() + max_wait
+
+        while time.time() < deadline:
+            try:
+                waiting = self.ser.in_waiting
+            except Exception:
+                break
+
+            if waiting > 0:
+                raw = self.ser.readline().decode(errors='ignore').strip()
+                if raw:
+                    lines.append(raw)
+                    # Small extension to collect bursty multi-line replies.
+                    deadline = time.time() + 0.05
+            else:
+                time.sleep(0.01)
+
+        return lines
+
     def close(self):
         if self.ser: self.ser.close()
+
     def send_command(self, cmd):
         if self.ser and self.ser.is_open:
             self.ser.write(cmd.encode('utf-8'))
             self.ser.flush()
             print(f"✅ [REAL HARDWARE SENT] Relay: {cmd.strip()}")
+            for line in self._read_available_lines(max_wait=0.25):
+                print(f"↩️ [RELAY RX] {line}")
         else:
             print(f"⚠️ [SIMULATION MODE] Relay: {cmd.strip()}")
             if self.error: print(f"   Error: {self.error}")
 
 app = Flask(__name__)
+
+
+class NoopStimulator:
+    def __init__(self):
+        self.ser = None
+        self.error = "disabled"
+
+    def close(self):
+        return
+
+    def stim_ems(self, channel, amplitude, freq, pulse_width, duration):
+        print(f"⚠️ [SKIPPED EMS - STIM DISABLED] ch={channel} amp={amplitude} freq={freq} pw={pulse_width} dur={duration}")
+
+    def stim_gvs(self, channel, amplitude, polarity, duration):
+        print(f"⚠️ [SKIPPED GVS - STIM DISABLED] ch={channel} amp={amplitude} pol={polarity} dur={duration}")
+
+    def stim_et(self, channel, amplitude, polarity, freq, pulse_width, duration):
+        print(f"⚠️ [SKIPPED ET - STIM DISABLED] ch={channel} amp={amplitude} pol={polarity} freq={freq} pw={pulse_width} dur={duration}")
 
 def find_serial_ports():
     ports = serial.tools.list_ports.comports()
@@ -89,18 +139,41 @@ def find_serial_ports():
 found_ports = find_serial_ports()
 env_stim_port = os.environ.get("STIM_PORT")
 env_relay_port = os.environ.get("RELAY_PORT")
+hardware_mode = os.environ.get("HARDWARE_MODE", "").strip().lower()
+
+# Relay-only is now the default behavior.
+# Full stim mode is enabled explicitly using one of:
+# - HARDWARE_MODE=full
+# - ENABLE_STIM=1
+# - STIM_PORT=<port>
+force_disable_stim = os.environ.get("DISABLE_STIM", "0") == "1" or hardware_mode == "relay"
+force_enable_stim = hardware_mode == "full" or os.environ.get("ENABLE_STIM", "0") == "1" or bool(env_stim_port)
+disable_stim = force_disable_stim or not force_enable_stim
 
 # Assign ports (prioritize environment variables, fallback to auto-discovery)
-stim_port = env_stim_port if env_stim_port else (found_ports[0] if len(found_ports) > 0 else None)
-relay_port = env_relay_port if env_relay_port else (found_ports[1] if len(found_ports) > 1 else None)
+if disable_stim:
+    stim_port = None
+else:
+    stim_port = env_stim_port if env_stim_port else (found_ports[0] if len(found_ports) > 0 else None)
 
-stimulator = HCIntEstim(port=stim_port)
+if env_relay_port:
+    relay_port = env_relay_port
+else:
+    relay_candidates = [p for p in found_ports if p != stim_port]
+    relay_port = relay_candidates[0] if len(relay_candidates) > 0 else (found_ports[0] if len(found_ports) > 0 else None)
+
+if disable_stim:
+    stimulator = NoopStimulator()
+    print("ℹ️ Stimulator disabled (default relay-only mode)")
+else:
+    stimulator = HCIntEstim(port=stim_port)
 relay_mcu = RelayController(port=relay_port)
 
 @app.route('/health', methods=['GET'])
 def health():
     return jsonify({
         "status": "ready", 
+        "hardware_mode": "relay" if disable_stim else "full",
         "stim_port": stim_port or "SIMULATED",
         "stim_hardware_connected": stimulator.ser is not None and stimulator.ser.is_open,
         "stim_last_error": stimulator.error,
@@ -121,7 +194,19 @@ def execute_sequence():
         except:
             sorted_keys = data.keys()
 
+        start_time = time.monotonic()
+
         for timestamp in sorted_keys:
+            # Honor the requested offset timing in payload keys.
+            try:
+                target_offset = float(timestamp)
+                elapsed = time.monotonic() - start_time
+                wait_s = target_offset - elapsed
+                if wait_s > 0:
+                    time.sleep(wait_s)
+            except Exception:
+                pass
+
             commands = data[timestamp]
             print(f"⏱️ Time {timestamp}s: Running {len(commands)} commands")
             
@@ -130,9 +215,9 @@ def execute_sequence():
 
                 # Process Relay Commands
                 if ctype == "RELAY":
-                    # Expects finger to be 'p', 'm', 'i', or 'x'
+                    # Expects relay selector target or reset: wrist_left/wrist_right/thumb/index/middle/ring/pinky/x
                     finger = cmd.get("finger", "x")
-                    relay_mcu.send_command(finger)
+                    relay_mcu.send_command(f"{finger}\n")
                 
                 # Process Stimulation Commands
                 else:

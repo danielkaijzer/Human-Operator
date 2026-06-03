@@ -5,6 +5,7 @@ Video stream client that captures frames and sends them to the LLM for motor com
 
 import cv2
 import json
+import os
 import time
 import threading
 import requests
@@ -12,7 +13,7 @@ from utils.llm import LLMClient
 from utils.speech import VoiceCommandListener
 from utils.prompts import SYSTEM_PROMPT, PLANNING_PROMPT, CHECK_PROMPT
 
-RECEIVER_URL = "https://writing-theorem-secret-publicity.trycloudflare.com/execute"
+RECEIVER_URL = os.getenv("RECEIVER_URL", "http://127.0.0.1:5001/execute")
 
 # Camera config
 CAMERA_INDEX = 0
@@ -67,32 +68,30 @@ def get_latest_frame() -> bytes:
                 raise
             time.sleep(0.5)
 
+    raise RuntimeError("Failed to capture frame after retries")
+
 
 
 def action_to_finger_mapping(action: str) -> str:
     """
     Map action names to receiver finger/command codes.
     
-    Based on vlm_test.py's PLANNING_PROMPT:
-    - p = pinky
-    - m = middle
-    - i = index (also closes thumb+index for gripping)
-    - x = RESET/END sequence (clears stacking, doesn't execute a finger)
-    
-    Only these codes are supported by receiver.py relay control.
-    
-    Wrist left uses EMS channel 2 directly (no relay needed).
+    Map actions to relay target names expected by firmware.
+
+    Supported relay targets:
+    - wrist_left, wrist_right, thumb, index, middle, ring, pinky
+    - x = reset/all off
     """
     mapping = {
         "clench_hand": "x",      # reset/end sequence
-        "close_index": "i",      # index (includes thumb+index for gripping)
-        "close_middle": "m",     # middle
-        "close_pinky": "p",      # pinky
-        "close_thumb": "i",      # grouped with index as thumb+index grip
-        # Wrist actions - keep mapped but receiver needs update:
+        "close_index": "index",
+        "close_middle": "middle",
+        "close_pinky": "pinky",
+        "close_thumb": "thumb",
+        "close_ring": "ring",
         "wrist_left": "wrist_left",
-        # These are NOT relay-compatible and will be skipped:
-        # "close_ring": not supported by hardware
+        "wrist_right": "wrist_right",
+        # These are not relay-compatible and will be skipped:
         # "biceps_flex": requires different command type
         # "lean_left": GVS command, not relay
         # "lean_right": GVS command, not relay
@@ -138,7 +137,7 @@ def transform_actions_to_receiver_format(claude_response: dict) -> dict:
     Timing logic:
     - Each action starts at cumulative_time (sum of all previous durations)
     - Duration in the action is how long the EMS stimulation lasts
-    - wrist_left uses EMS channel 2 only (no relay command)
+    - All supported actions select one relay target then stimulate EMS channel 1
     - Unsupported actions (biceps, lean) are logged but not sent
     """
     receiver_format = {}
@@ -169,7 +168,7 @@ def transform_actions_to_receiver_format(claude_response: dict) -> dict:
             time_key = str(current_time)
             
             # Skip unsupported actions (biceps, lean, etc.)
-            if finger_code in ["wrist_right", "biceps_flex", "lean_left", "lean_right"]:
+            if action_name in ["biceps_flex", "lean_left", "lean_right"]:
                 print(f"[!] Skipping unsupported action: {action_name}")
                 current_time += float(duration) + 1.0
                 continue
@@ -177,30 +176,19 @@ def transform_actions_to_receiver_format(claude_response: dict) -> dict:
             if time_key not in receiver_format:
                 receiver_format[time_key] = []
 
-            # Wrist left: EMS on channel 2 only (no relay needed)
-            if finger_code == "wrist_left":
-                receiver_format[time_key].append({
-                    "type": "EMS",
-                    "channel": 2,
-                    "amplitude": EMS_AMPLITUDE,
-                    "duration": float(duration),
-                    "frequency": EMS_FREQUENCY,
-                    "pulse_width": EMS_PULSE_WIDTH
-                })
-            else:
-                # Finger actions: send RELAY first (finger select), then EMS on channel 1
-                receiver_format[time_key].append({
-                    "type": "RELAY",
-                    "finger": finger_code
-                })
-                receiver_format[time_key].append({
-                    "type": "EMS",
-                    "channel": 1,
-                    "amplitude": EMS_AMPLITUDE,
-                    "duration": float(duration),
-                    "frequency": EMS_FREQUENCY,
-                    "pulse_width": EMS_PULSE_WIDTH
-                })
+            # All supported actions: RELAY select first, then EMS on channel 1
+            receiver_format[time_key].append({
+                "type": "RELAY",
+                "finger": finger_code
+            })
+            receiver_format[time_key].append({
+                "type": "EMS",
+                "channel": 1,
+                "amplitude": EMS_AMPLITUDE,
+                "duration": float(duration),
+                "frequency": EMS_FREQUENCY,
+                "pulse_width": EMS_PULSE_WIDTH
+            })
             
             # Move to next action time (current duration + 1 second buffer for relay to open)
             current_time += float(duration) + 1.0
