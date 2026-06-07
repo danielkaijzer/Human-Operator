@@ -34,8 +34,8 @@ This project won MIT Hard Mode 2026 (Learn Track).
 - Valdemar Danry - [Portfolio](https://valdemardanry.com) | [GitHub](https://github.com/valleballe) | [LinkedIn](https://www.linkedin.com/in/valdemar-danry)
 - Daniel Kaijzer - [GitHub](https://github.com/danielkaijzer) | [LinkedIn](https://www.linkedin.com/in/danielkaijzer/)
 - Yutong Wu - [GitHub](https://github.com/ichbinHallie0426) | [LinkedIn](https://www.linkedin.com/in/yutong-wu-4b66661b5/)
-- Sean Lewis - [Portfolio](https://seanhardestylewis.com/) | [GitHub](https://github.com/seanhlewis) | [LinkedIn](https://www.linkedin.com/in/seanhardestylewis/)
 - Ashley Neall - [Portfolio](https://aneall.github.io/) | [GitHub](https://github.com/aneall) | [LinkedIn](https://www.linkedin.com/in/ashley-neall/)
+- Sean Hardesty Lewis - [Portfolio](https://seanhardestylewis.com/) | [GitHub](https://github.com/seanhlewis) | [LinkedIn](https://www.linkedin.com/in/seanhardestylewis/)
 
 ## Safety and Responsibility
 
