@@ -7,9 +7,15 @@ pynput
 
 # stt
 realtimestt
+pygame
 
 # server
 flask
+requests
+
+# hardware / serial 
+pyserial
 
 # manual control app
 PyQt5
+matplotlib
