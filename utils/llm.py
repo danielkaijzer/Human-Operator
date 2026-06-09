@@ -11,7 +11,7 @@ load_dotenv()
 
 
 class LLMClient:
-    def __init__(self, model: str = "claude-opus-4-5", max_tokens: int = 512):
+    def __init__(self, model: str = "claude-opus-4-8", max_tokens: int = 512):
         self.client = anthropic.Anthropic()  # reads ANTHROPIC_API_KEY from env
         self.model = model
         self.max_tokens = max_tokens
