@@ -30,7 +30,7 @@ This project won MIT Hard Mode 2026 (Learn Track).
 - `run_hardware.sh`: Recommended one-command launcher for real relay hardware mode
 
 ## Team
-- Peter He - [Portfolio](https://peterhe.dev) | [GitHub](https://github.com/molegod) | [LinkedIn](https://www.linkedin.com/in/ph475/)
+- Peter He - [Portfolio](https://peterhci.com) | [GitHub](https://github.com/molegod) | [LinkedIn](https://www.linkedin.com/in/ph475/)
 - Valdemar Danry - [Portfolio](https://valdemardanry.com) | [GitHub](https://github.com/valleballe) | [LinkedIn](https://www.linkedin.com/in/valdemar-danry)
 - Daniel Kaijzer - [GitHub](https://github.com/danielkaijzer) | [LinkedIn](https://www.linkedin.com/in/danielkaijzer/)
 - Yutong Wu - [GitHub](https://github.com/ichbinHallie0426) | [LinkedIn](https://www.linkedin.com/in/yutong-wu-4b66661b5/)
