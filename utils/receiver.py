@@ -9,15 +9,16 @@ import serial.tools.list_ports
 # data structure
 # {
 #   "0.0": [
-#     {"type": "RELAY", "finger": "i"},
-#     {"type": "EMS", "channel": 1, "amplitude": 60, "duration": 1.0, "frequency": 100}
+#     {"type": "RELAY", "target": "grab"},
+#     {"type": "EMS", "channel": 2, "amplitude": 60, "duration": 1.0, "frequency": 100}
 #   ],
 #   "1.5": [
-#     {"type": "RELAY", "finger": "x"}
+#     {"type": "RELAY", "target": "x"}
 #   ]
 # }
-# Note: EMS uses channel 1. Relay selects which electrode path is active.
-# Relay commands can be: wrist_left, wrist_right, thumb, index, middle, ring, pinky, x
+# Note: the relay selects which electrode the stimulator channel drives.
+# Relay targets can be: grab, wrist_left, wrist_right, x (off).
+# Firmware also accepts the aliases g, w, q, x.
 # Import the existing stimulator class
 try:
     from hcint_estim import HCIntEstim # type: ignore
@@ -215,9 +216,12 @@ def execute_sequence():
 
                 # Process Relay Commands
                 if ctype == "RELAY":
-                    # Expects relay selector target or reset: wrist_left/wrist_right/thumb/index/middle/ring/pinky/x
-                    finger = cmd.get("finger", "x")
-                    relay_mcu.send_command(f"{finger}\n")
+                    # Electrode selector: grab / wrist_left / wrist_right / x (off).
+                    # The stimulator's channel 2 is routed to the selected
+                    # electrode; only one is active at a time.
+                    # ("finger" is the legacy key name, still accepted.)
+                    target = cmd.get("target", cmd.get("finger", "x"))
+                    relay_mcu.send_command(f"{target}\n")
                 
                 # Process Stimulation Commands
                 else:

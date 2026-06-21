@@ -1,17 +1,17 @@
-// Electrode select lines (user-provided config)
+// Electrode relay router.
+//
+// A single stimulator channel (channel 2) is routed through this relay board to
+// one of three electrodes. Only one relay is active at a time, so the three
+// actions are mutually exclusive.
 const int electrode1 = 2;  // wrist_left
 const int electrode2 = 4;  // wrist_right
-const int electrode3 = 3;  // thumb
-const int electrode4 = 5;  // index
-const int electrode5 = 6;  // middle
-const int electrode6 = 7;  // ring
-const int electrode7 = 8;  // pinky
+const int electrode3 = 3;  // grab (grip)
 
 // Most relay boards are active-low (LOW = ON, HIGH = OFF).
 // If your board is active-high, set this to false.
 bool relayActiveLow = false;
 
-const int relayPins[] = {electrode1, electrode2, electrode3, electrode4, electrode5, electrode6, electrode7};
+const int relayPins[] = {electrode1, electrode2, electrode3};
 const int relayPinCount = sizeof(relayPins) / sizeof(relayPins[0]);
 
 int relayOnLevel() {
@@ -58,21 +58,17 @@ void setup() {
   // Initialize serial communication so we can chat with it
   Serial.begin(115200);
 
-  // Initialize all electrode select pins as outputs
+  // Initialize the electrode select pins as outputs
   pinMode(electrode1, OUTPUT);
   pinMode(electrode2, OUTPUT);
   pinMode(electrode3, OUTPUT);
-  pinMode(electrode4, OUTPUT);
-  pinMode(electrode5, OUTPUT);
-  pinMode(electrode6, OUTPUT);
-  pinMode(electrode7, OUTPUT);
 
   allOff();
 
   // Print the instructions to the Serial Monitor
-  Serial.println("Electrode Router Ready.");
+  Serial.println("Electrode Relay Router Ready.");
   Serial.println("Commands (name or alias):");
-  Serial.println("wrist_left/w, wrist_right/q, thumb/t, index/i, middle/m, ring/r, pinky/p");
+  Serial.println("wrist_left/w, wrist_right/q, grab/g");
   Serial.println("x = all off, test = sweep channels");
   Serial.println("mode_low = active-low relays, mode_high = active-high relays");
 }
@@ -92,21 +88,9 @@ void loop() {
     } else if (isCommand(command, "wrist_right", 'q')) {
       selectOnly(electrode2);
       Serial.println("Selected: wrist_right");
-    } else if (isCommand(command, "thumb", 't')) {
+    } else if (isCommand(command, "grab", 'g')) {
       selectOnly(electrode3);
-      Serial.println("Selected: thumb");
-    } else if (isCommand(command, "index", 'i')) {
-      selectOnly(electrode4);
-      Serial.println("Selected: index");
-    } else if (isCommand(command, "middle", 'm')) {
-      selectOnly(electrode5);
-      Serial.println("Selected: middle");
-    } else if (isCommand(command, "ring", 'r')) {
-      selectOnly(electrode6);
-      Serial.println("Selected: ring");
-    } else if (isCommand(command, "pinky", 'p')) {
-      selectOnly(electrode7);
-      Serial.println("Selected: pinky");
+      Serial.println("Selected: grab");
     } else if (command.equalsIgnoreCase("x")) {
       allOff();
       Serial.println("All electrodes OFF");
