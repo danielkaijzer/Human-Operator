@@ -1,5 +1,6 @@
 # llm
 anthropic
+openai
 numpy
 opencv-python
 python-dotenv
