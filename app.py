@@ -76,12 +76,12 @@ def get_latest_frame() -> bytes:
 #   relay_target: relay electrode to select before stimulating
 #   ems_channel:  stimulator channel to fire
 # Only channel 2 is wired to the relay board, so all three actions route
-# through it. The relay board enables one electrode at a time, which makes the
+# through it. The firmware enables one electrode at a time, which makes the
 # actions mutually exclusive (one action per step).
 ACTION_SPEC = {
     "grab":        {"relay_target": "grab",        "ems_channel": 2},
-    "wrist_left":  {"relay_target": "wrist_left",  "ems_channel": 2},
-    "wrist_right": {"relay_target": "wrist_right", "ems_channel": 2},
+    "arm_left":  {"relay_target": "arm_left",  "ems_channel": 2},
+    "arm_right": {"relay_target": "arm_right", "ems_channel": 2},
 }
 
 
@@ -96,7 +96,7 @@ def transform_actions_to_receiver_format(claude_response: dict) -> dict:
     INPUT (numeric keys):
     {
       "1": [["grab", 1.0]],
-      "2": [["wrist_left", 1.5]]
+      "2": [["arm_left", 1.5]]
     }
 
     OUTPUT (for receiver.py):
@@ -106,7 +106,7 @@ def transform_actions_to_receiver_format(claude_response: dict) -> dict:
         {"type": "EMS", "channel": 2, "amplitude": 60, "duration": 1.0, ...}
       ],
       "2.0": [
-        {"type": "RELAY", "target": "wrist_left"},
+        {"type": "RELAY", "target": "arm_left"},
         {"type": "EMS", "channel": 2, "amplitude": 60, "duration": 1.5, ...}
       ],
       "4.5": [
@@ -156,7 +156,7 @@ def transform_actions_to_receiver_format(claude_response: dict) -> dict:
             if time_key not in receiver_format:
                 receiver_format[time_key] = []
 
-            # Route the relevant wrist relay first (grab drives the channel directly).
+            # Route the relevant arm relay first (grab drives the channel directly).
             if spec["relay_target"] is not None:
                 receiver_format[time_key].append({
                     "type": "RELAY",

@@ -17,7 +17,7 @@ import serial.tools.list_ports
 #   ]
 # }
 # Note: the relay selects which electrode the stimulator channel drives.
-# Relay targets can be: grab, wrist_left, wrist_right, x (off).
+# Relay targets can be: grab, arm_left, arm_right, x (off).
 # Firmware also accepts the aliases g, w, q, x.
 # Import the existing stimulator class
 try:
@@ -216,7 +216,7 @@ def execute_sequence():
 
                 # Process Relay Commands
                 if ctype == "RELAY":
-                    # Electrode selector: grab / wrist_left / wrist_right / x (off).
+                    # Electrode selector: grab / arm_left / arm_right / x (off).
                     # The stimulator's channel 2 is routed to the selected
                     # electrode; only one is active at a time.
                     # ("finger" is the legacy key name, still accepted.)

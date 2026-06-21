@@ -1,10 +1,6 @@
 // Electrode relay router.
-//
-// A single stimulator channel (channel 2) is routed through this relay board to
-// one of three electrodes. Only one relay is active at a time, so the three
-// actions are mutually exclusive.
-const int electrode1 = 2;  // wrist_left
-const int electrode2 = 4;  // wrist_right
+const int electrode1 = 2;  // arm_left
+const int electrode2 = 4;  // arm_right
 const int electrode3 = 3;  // grab (grip)
 
 // Most relay boards are active-low (LOW = ON, HIGH = OFF).
@@ -24,7 +20,7 @@ const unsigned long MAX_HOLD_MS = 5000;      // hard cap so nothing sticks on to
 
 // Per-action hold times. The firmware owns these; the host just sends the name.
 const unsigned long GRAB_HOLD_MS = 2000;     // grip holds long enough to grab
-const unsigned long WRIST_HOLD_MS = 300;     // a wrist turn is a quick flick
+const unsigned long ARM_HOLD_MS = 300;     // a arm turn is a quick flick
 
 int relayOnLevel() {
   return relayActiveLow ? LOW : HIGH;
@@ -83,7 +79,7 @@ void setup() {
   // Print the instructions to the Serial Monitor
   Serial.println("Electrode Relay Router Ready.");
   Serial.println("Commands (name or alias):");
-  Serial.println("wrist_left/w, wrist_right/q, grab/g");
+  Serial.println("arm_left/w, arm_right/q, grab/g");
   Serial.println("x = all off, test = sweep channels");
   Serial.println("mode_low = active-low relays, mode_high = active-high relays");
 }
@@ -105,12 +101,12 @@ void loop() {
       return;
     }
 
-    if (isCommand(command, "wrist_left", 'w')) {
-      select(electrode1, WRIST_HOLD_MS);
-      Serial.println("Selected: wrist_left");
-    } else if (isCommand(command, "wrist_right", 'q')) {
-      select(electrode2, WRIST_HOLD_MS);
-      Serial.println("Selected: wrist_right");
+    if (isCommand(command, "arm_left", 'l')) {
+      select(electrode1, ARM_HOLD_MS);
+      Serial.println("Selected: arm_left");
+    } else if (isCommand(command, "arm_right", 'q')) {
+      select(electrode2, ARM_HOLD_MS);
+      Serial.println("Selected: arm_right");
     } else if (isCommand(command, "grab", 'g')) {
       select(electrode3, GRAB_HOLD_MS);
       Serial.println("Selected: grab");
