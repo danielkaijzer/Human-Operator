@@ -19,8 +19,12 @@ const int relayPinCount = sizeof(relayPins) / sizeof(relayPins[0]);
 // so it can never get stuck on if commands stop arriving.
 // holdUntil == 0 means nothing is scheduled.
 unsigned long holdUntil = 0;
-const unsigned long DEFAULT_HOLD_MS = 2000;  // used if a select carries no duration
+const unsigned long DEFAULT_HOLD_MS = 2000;  // fallback if a select passes 0
 const unsigned long MAX_HOLD_MS = 5000;      // hard cap so nothing sticks on too long
+
+// Per-action hold times. The firmware owns these; the host just sends the name.
+const unsigned long GRAB_HOLD_MS = 2000;     // grip holds long enough to grab
+const unsigned long WRIST_HOLD_MS = 300;     // a wrist turn is a quick flick
 
 int relayOnLevel() {
   return relayActiveLow ? LOW : HIGH;
@@ -79,7 +83,7 @@ void setup() {
   // Print the instructions to the Serial Monitor
   Serial.println("Electrode Relay Router Ready.");
   Serial.println("Commands (name or alias):");
-  Serial.println("wrist_left/w, wrist_right/q, grab/g)");
+  Serial.println("wrist_left/w, wrist_right/q, grab/g");
   Serial.println("x = all off, test = sweep channels");
   Serial.println("mode_low = active-low relays, mode_high = active-high relays");
 }
@@ -101,15 +105,14 @@ void loop() {
       return;
     }
 
-
     if (isCommand(command, "wrist_left", 'w')) {
-      selectFor(electrode1, holdMs);
+      select(electrode1, WRIST_HOLD_MS);
       Serial.println("Selected: wrist_left");
     } else if (isCommand(command, "wrist_right", 'q')) {
-      selectFor(electrode2, holdMs);
+      select(electrode2, WRIST_HOLD_MS);
       Serial.println("Selected: wrist_right");
     } else if (isCommand(command, "grab", 'g')) {
-      selectFor(electrode3, holdMs);
+      select(electrode3, GRAB_HOLD_MS);
       Serial.println("Selected: grab");
     } else if (command.equalsIgnoreCase("x")) {
       allOff();
