@@ -14,6 +14,14 @@ bool relayActiveLow = false;
 const int relayPins[] = {electrode1, electrode2, electrode3};
 const int relayPinCount = sizeof(relayPins) / sizeof(relayPins[0]);
 
+// Auto-off safety. If the stimulator runs continuously, the relay hold time IS
+// the stimulation time. A selected electrode is dropped when its hold expires,
+// so it can never get stuck on if commands stop arriving.
+// holdUntil == 0 means nothing is scheduled.
+unsigned long holdUntil = 0;
+const unsigned long DEFAULT_HOLD_MS = 2000;  // used if a select carries no duration
+const unsigned long MAX_HOLD_MS = 5000;      // hard cap so nothing sticks on too long
+
 int relayOnLevel() {
   return relayActiveLow ? LOW : HIGH;
 }
@@ -32,9 +40,12 @@ void allOff() {
   }
 }
 
-void selectOnly(int pin) {
+void select(int pin, unsigned long holdMs) {
+  if (holdMs == 0) holdMs = DEFAULT_HOLD_MS;
+  if (holdMs > MAX_HOLD_MS) holdMs = MAX_HOLD_MS;
   allOff();
   setRelayState(pin, true);
+  holdUntil = millis() + holdMs;
 }
 
 void runTestSweep() {
@@ -68,12 +79,20 @@ void setup() {
   // Print the instructions to the Serial Monitor
   Serial.println("Electrode Relay Router Ready.");
   Serial.println("Commands (name or alias):");
-  Serial.println("wrist_left/w, wrist_right/q, grab/g");
+  Serial.println("wrist_left/w, wrist_right/q, grab/g)");
   Serial.println("x = all off, test = sweep channels");
   Serial.println("mode_low = active-low relays, mode_high = active-high relays");
 }
 
 void loop() {
+  // Safety watchdog: drop the active electrode once its hold time expires.
+  // (long) cast handles millis() rollover correctly.
+  if (holdUntil != 0 && (long)(millis() - holdUntil) >= 0) {
+    allOff();
+    holdUntil = 0;
+    Serial.println("Auto-off (hold expired)");
+  }
+
   if (Serial.available() > 0) {
     String command = Serial.readStringUntil('\n');
     command.trim();
@@ -82,27 +101,31 @@ void loop() {
       return;
     }
 
+
     if (isCommand(command, "wrist_left", 'w')) {
-      selectOnly(electrode1);
+      selectFor(electrode1, holdMs);
       Serial.println("Selected: wrist_left");
     } else if (isCommand(command, "wrist_right", 'q')) {
-      selectOnly(electrode2);
+      selectFor(electrode2, holdMs);
       Serial.println("Selected: wrist_right");
     } else if (isCommand(command, "grab", 'g')) {
-      selectOnly(electrode3);
+      selectFor(electrode3, holdMs);
       Serial.println("Selected: grab");
     } else if (command.equalsIgnoreCase("x")) {
       allOff();
+      holdUntil = 0;
       Serial.println("All electrodes OFF");
     } else if (command.equalsIgnoreCase("test")) {
       runTestSweep();
     } else if (command.equalsIgnoreCase("mode_low")) {
       relayActiveLow = true;
       allOff();
+      holdUntil = 0;
       Serial.println("Relay polarity set to ACTIVE-LOW");
     } else if (command.equalsIgnoreCase("mode_high")) {
       relayActiveLow = false;
       allOff();
+      holdUntil = 0;
       Serial.println("Relay polarity set to ACTIVE-HIGH");
     } else {
       Serial.print("Unknown command: ");
