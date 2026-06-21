@@ -2,10 +2,12 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PYTHON_BIN="$ROOT_DIR/.venv/bin/python"
+# Defaults to the repo venv; override with PYTHON_BIN to use conda/system Python,
+# e.g. PYTHON_BIN="$(which python)" ./run_hardware.sh
+PYTHON_BIN="${PYTHON_BIN:-$ROOT_DIR/.venv/bin/python}"
 
 # Defaults can be overridden when invoking the script.
-RELAY_PORT="${RELAY_PORT:-/dev/cu.usbserial-210}"
+RELAY_PORT="${RELAY_PORT:-/dev/cu.usbmodem34B7DA631B182}"
 RECEIVER_HOST="${RECEIVER_HOST:-127.0.0.1}"
 RECEIVER_PORT="${RECEIVER_PORT:-5001}"
 RECEIVER_URL="http://${RECEIVER_HOST}:${RECEIVER_PORT}/execute"

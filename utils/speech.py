@@ -124,6 +124,17 @@ class VoiceCommandListener:
         except KeyboardInterrupt:
             print("\n[*] Stopped")
 
+    def stop(self):
+        """Release recorder resources so the process can exit cleanly.
+
+        RealtimeSTT runs its VAD/transcription in background processes; without
+        an explicit shutdown they keep the interpreter alive after main() exits.
+        """
+        if self.silence_timer:
+            self.silence_timer.cancel()
+        if self.recorder:
+            self.recorder.shutdown()
+
 
 if __name__ == '__main__':
     listener = VoiceCommandListener()
