@@ -126,6 +126,12 @@ class NoopStimulator:
     def stim_et(self, channel, amplitude, polarity, freq, pulse_width, duration):
         print(f"⚠️ [SKIPPED ET - STIM DISABLED] ch={channel} amp={amplitude} pol={polarity} freq={freq} pw={pulse_width} dur={duration}")
 
+def _clamp(value, lo, hi, label):
+    if value < lo or value > hi:
+        print(f"⚠️ [CLAMPED] {label}={value} outside [{lo}, {hi}], clamping")
+        return max(lo, min(hi, value))
+    return value
+
 def find_serial_ports():
     ports = serial.tools.list_ports.comports()
     valid_ports = []
@@ -222,10 +228,12 @@ def execute_sequence():
                 # Process Stimulation Commands
                 else:
                     chan = int(cmd.get("channel", 1))
-                    amp = float(cmd.get("amplitude", 6))
-                    dur = float(cmd.get("duration", 0.5))
-                    freq = int(cmd.get("frequency", 100))
-                    pw = int(cmd.get("pulse_width", 300))
+                    # Same hardcoded bounds manual_control_app.py enforces via its sliders,
+                    # applied here so /execute can't drive the stimulator outside them.
+                    amp = _clamp(float(cmd.get("amplitude", 6)), 0, 60, "amplitude")
+                    dur = _clamp(float(cmd.get("duration", 0.5)), 0, 10, "duration")
+                    freq = _clamp(int(cmd.get("frequency", 100)), 0, 100, "frequency")
+                    pw = _clamp(int(cmd.get("pulse_width", 300)), 0, 1000, "pulse_width")
                     pol = int(cmd.get("polarity", 0))
 
                     if ctype == "EMS":
