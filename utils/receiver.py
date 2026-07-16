@@ -18,32 +18,57 @@ import serial.tools.list_ports
 # }
 # Note: EMS uses channel 1. Relay selects which electrode path is active.
 # Relay commands can be: wrist_left, wrist_right, thumb, index, middle, ring, pinky, x
+
+
+class SerialDevice:
+    """Shared connect/close/send-or-simulate behavior for serial hardware."""
+
+    label = "device"
+
+    def __init__(self, port=None, baudrate=115200, timeout=1):
+        self.port = port
+        self.ser = None
+        self.error = None
+        if port:
+            try:
+                self.ser = serial.Serial(port, baudrate, timeout=timeout)
+                self._on_connect()
+            except Exception as e:
+                self.error = str(e)
+                print(f"❌ {self.label.upper()} SERIAL CONNECTION ERROR: {e}")
+
+    def _on_connect(self):
+        print(f"✅ Connected to {self.label} on {self.port}")
+
+    def _format_command(self, cmd):
+        return cmd.strip()
+
+    def _after_send(self):
+        pass
+
+    def close(self):
+        if self.ser:
+            self.ser.close()
+
+    def send_command(self, cmd):
+        if self.ser and self.ser.is_open:
+            self.ser.write(cmd.encode('utf-8'))
+            self.ser.flush()
+            print(f"✅ [REAL HARDWARE SENT] {self._format_command(cmd)}")
+            self._after_send()
+        else:
+            print(f"⚠️ [SIMULATION MODE] {self._format_command(cmd)}")
+            if self.error:
+                print(f"   Error: {self.error}")
+
+
 # Import the existing stimulator class
 try:
     from hcint_estim import HCIntEstim # type: ignore
 except ImportError:
-    class HCIntEstim:
-        def __init__(self, port=None, baudrate=115200, timeout=1):
-            self.port = port
-            self.ser = None
-            self.error = None
-            if port:
-                try:
-                    self.ser = serial.Serial(port, baudrate, timeout=timeout)
-                    print(f"✅ Connected to stimulator on {port}")
-                except Exception as e:
-                    self.error = str(e)
-                    print(f"❌ STIMULATOR SERIAL CONNECTION ERROR: {e}")
-        def close(self):
-            if self.ser: self.ser.close()
-        def send_command(self, cmd):
-            if self.ser and self.ser.is_open:
-                self.ser.write(cmd.encode())
-                self.ser.flush()
-                print(f"✅ [REAL HARDWARE SENT] {cmd.strip()}")
-            else:
-                print(f"⚠️ [SIMULATION MODE] {cmd.strip()}")
-                if self.error: print(f"   Error: {self.error}")
+    class HCIntEstim(SerialDevice):
+        label = "stimulator"
+
         def stim_ems(self, channel, amplitude, freq, pulse_width, duration):
             self.send_command(f"ems,{channel},{amplitude},{freq},{pulse_width},{duration}\n")
         def stim_gvs(self, channel, amplitude, polarity, duration):
@@ -51,22 +76,25 @@ except ImportError:
         def stim_et(self, channel, amplitude, polarity, freq, pulse_width, duration):
             self.send_command(f"et,{channel},{amplitude},{polarity},{freq},{pulse_width},{duration}\n")
 
-# New Relay Controller Class
-class RelayController:
+
+class RelayController(SerialDevice):
+    label = "relay MCU"
+
     def __init__(self, port=None, baudrate=115200, timeout=0.1):
-        self.port = port
-        self.ser = None
-        self.error = None
-        if port:
-            try:
-                self.ser = serial.Serial(port, baudrate, timeout=timeout)
-                time.sleep(1.5)  # Let the Arduino reset and boot
-                print(f"✅ Connected to relay MCU on {port}")
-                for line in self._read_available_lines(max_wait=0.8):
-                    print(f"↩️ [RELAY BOOT] {line}")
-            except Exception as e:
-                self.error = str(e)
-                print(f"❌ RELAY SERIAL CONNECTION ERROR: {e}")
+        super().__init__(port, baudrate, timeout)
+
+    def _on_connect(self):
+        time.sleep(1.5)  # Let the Arduino reset and boot
+        print(f"✅ Connected to relay MCU on {self.port}")
+        for line in self._read_available_lines(max_wait=0.8):
+            print(f"↩️ [RELAY BOOT] {line}")
+
+    def _format_command(self, cmd):
+        return f"Relay: {cmd.strip()}"
+
+    def _after_send(self):
+        for line in self._read_available_lines(max_wait=0.25):
+            print(f"↩️ [RELAY RX] {line}")
 
     def _read_available_lines(self, max_wait=0.25):
         if not (self.ser and self.ser.is_open):
@@ -91,20 +119,6 @@ class RelayController:
                 time.sleep(0.01)
 
         return lines
-
-    def close(self):
-        if self.ser: self.ser.close()
-
-    def send_command(self, cmd):
-        if self.ser and self.ser.is_open:
-            self.ser.write(cmd.encode('utf-8'))
-            self.ser.flush()
-            print(f"✅ [REAL HARDWARE SENT] Relay: {cmd.strip()}")
-            for line in self._read_available_lines(max_wait=0.25):
-                print(f"↩️ [RELAY RX] {line}")
-        else:
-            print(f"⚠️ [SIMULATION MODE] Relay: {cmd.strip()}")
-            if self.error: print(f"   Error: {self.error}")
 
 app = Flask(__name__)
 
@@ -191,7 +205,7 @@ def execute_sequence():
         # Sort sequence keys
         try:
             sorted_keys = sorted(data.keys(), key=lambda x: float(x))
-        except:
+        except (TypeError, ValueError):
             sorted_keys = data.keys()
 
         start_time = time.monotonic()
@@ -245,7 +259,7 @@ def execute_sequence():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    print(f"🚀 Receiver starting on port 5001...")
+    print("🚀 Receiver starting on port 5001...")
     print(f"🛠️ Stimulator Port: {stim_port or 'NONE'}")
     print(f"🛠️ Relay Port: {relay_port or 'NONE'}")
     app.run(host='0.0.0.0', port=5001)

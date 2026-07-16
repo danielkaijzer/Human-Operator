@@ -1,0 +1,6 @@
+# Dependencies needed to run the test suite and linter (no camera/audio/GUI
+# stack required — tests run fully headless in simulation mode).
+flask
+pyserial
+pytest
+ruff

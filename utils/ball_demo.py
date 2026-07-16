@@ -8,13 +8,14 @@ The idea:
 
 import cv2
 import numpy as np
+import os
 import requests
 import time
-import json
 from collections import deque
 
 # --- Configuration ---
-RECEIVER_URL = "https://amsterdam-river-lease-toolbox.trycloudflare.com/execute"
+# Same env-var convention as app.py.
+RECEIVER_URL = os.getenv("RECEIVER_URL", "http://127.0.0.1:5001/execute")
 
 EMS_COMMAND = {
     "0": [
@@ -27,9 +28,6 @@ RELAY_COMMAND = {
         {"type": "RELAY", "finger": "m"},
     ]
 }
-
-response = requests.post(RECEIVER_URL, json=RELAY_COMMAND, timeout=5)
-print(f"[HTTP] Sent RELAY command to {RECEIVER_URL} -> {response.status_code}")
 
 # HSV range for bright orange
 # Ball 1 Settings
@@ -64,6 +62,10 @@ def detect_approach(area_buffer):
 
 
 def main():
+    # Select the middle-finger relay path before the demo starts.
+    response = requests.post(RECEIVER_URL, json=RELAY_COMMAND, timeout=5)
+    print(f"[HTTP] Sent RELAY command to {RECEIVER_URL} -> {response.status_code}")
+
     # The front facing (OV5640) defaults to 0
     camera_index_1 = 0
 

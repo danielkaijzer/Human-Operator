@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import (QApplication, QWidget, QLabel, QPushButton, QVBoxLayout, 
                             QSlider, QLineEdit, QHBoxLayout, QRadioButton, 
-                            QButtonGroup, QGridLayout, QGroupBox, QSizePolicy, QMessageBox)
+                            QButtonGroup, QGridLayout, QGroupBox, QMessageBox)
 from PyQt5.QtCore import Qt
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -504,12 +504,12 @@ class StimulationGUI(QWidget):
             filename = f"settings/human_operator_cfg_{timestamp}.txt"
             
             with open(filename, "w") as f:
-                f.write(f"SYSTEM: HUMAN OPERATOR\n")
-                f.write(f"MODE: EMS\n")
+                f.write("SYSTEM: HUMAN OPERATOR\n")
+                f.write("MODE: EMS\n")
                 f.write(f"CHANNEL: {self.get_channel()}\n")
                 f.write(f"FREQUENCY: {self.sliders['FREQUENCY']['slider'].value()} Hz\n")
                 f.write(f"PULSE WIDTH: {self.sliders['PULSE WIDTH']['slider'].value()} μs\n")
-                f.write(f"POLARITY: BIPHASIC\n")  
+                f.write("POLARITY: BIPHASIC\n")  
                 f.write(f"AMPLITUDE: {self.sliders['AMPLITUDE']['slider'].value()} {self.sliders['AMPLITUDE']['unit']}\n")
                 f.write(f"DURATION: {self.sliders['DURATION']['slider'].value()} ms\n")
                 
