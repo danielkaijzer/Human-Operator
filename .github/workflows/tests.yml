@@ -1,0 +1,26 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # Deliberately not `pip install -r requirements.txt`: the full list
+      # pulls in opencv, PyQt5, and RealtimeSTT, which need system audio/GL
+      # libraries this runner doesn't have and aren't needed for these tests.
+      - name: Install test dependencies
+        run: pip install flask pyserial requests pytest
+
+      - name: Run tests
+        run: pytest tests/ -v
